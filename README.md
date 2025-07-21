@@ -1,66 +1,28 @@
-## Foundry
+# NzubeFi
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+**NzubeFi** is a decentralized finance (DeFi) protocol for **lending and staking** on Ethereum and compatible chains. This repository contains all smart contracts, tests, deployment scripts, and protocol documentation for the project under the **Nzube-Staking** organization.
 
-Foundry consists of:
+---
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+## 🚀 **Table of Contents**
 
-## Documentation
+- [About NzubeFi](#about-nzubefi)
+- [Folder Structure](#folder-structure)
+- [Getting Started](#getting-started)
+- [Development Workflow](#development-workflow)
+- [Testing](#testing)
+- [Deployment](#deployment)
+- [Branching Strategy](#branching-strategy)
+- [Contributing](#contributing)
+- [License](#license)
 
-https://book.getfoundry.sh/
+---
 
-## Usage
+## 🔗 **About NzubeFi**
 
-### Build
+NzubeFi provides secure and transparent lending and staking services using upgradeable smart contracts, ensuring flexibility and future-proofing protocol logic.
 
-```shell
-$ forge build
-```
+---
 
-### Test
+## 🗂️ **Folder Structure**
 
-```shell
-$ forge test
-```
-
-### Format
-
-```shell
-$ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
