@@ -26,3 +26,13 @@ NzubeFi provides secure and transparent lending and staking services using upgra
 
 ## 🗂️ **Folder Structure**
 
+## ⚙️ Installation
+
+After cloning the repository, install all dependencies:
+
+```bash
+# Install core dependencies
+forge install OpenZeppelin/openzeppelin-contracts-upgradeable
+forge install Uniswap/v3-core
+forge install Uniswap/v3-periphery
+forge install PaulRBerg/prb-math
