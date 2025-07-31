@@ -5,6 +5,7 @@ import {Script, console} from "forge-std/Script.sol";
 import {Counter} from "../src/Counter.sol";
 
 // First Commit
+// Second Commit
 contract CounterScript is Script {
     Counter public counter;
 
