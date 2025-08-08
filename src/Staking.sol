@@ -4,13 +4,12 @@ pragma solidity ^0.8.19;
 import {ERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
-import {Vault} from "./Vault.sol";
-
+import {NDIFIVault} from "./NDI-FIVAULT.sol";
 
 contract TokenStaking is Ownable, ReentrancyGuard {
-    ERC20 public immutable stakeToken;  // Token X
+    ERC20 public immutable stakeToken; // Token X
     ERC20 public immutable rewardToken;
-    IVault public immutable vault;
+    NDIFIVault public immutable vault;
 
     uint256 public immutable apy;
     uint256 public immutable minStake;
@@ -26,7 +25,11 @@ contract TokenStaking is Ownable, ReentrancyGuard {
     mapping(address => StakeInfo) public stakes;
 
     event Staked(address indexed user, uint256 amount);
-    event Withdrawn(address indexed user, uint256 stakedAmount, uint256 rewardAmount);
+    event Withdrawn(
+        address indexed user,
+        uint256 stakedAmount,
+        uint256 rewardAmount
+    );
 
     error BelowMinimumStake();
     error AboveMaximumStake();
@@ -47,7 +50,7 @@ contract TokenStaking is Ownable, ReentrancyGuard {
     ) Ownable(initialOwner) {
         stakeToken = ERC20(_stakeToken);
         rewardToken = ERC20(_rewardToken);
-        vault = IVault(_vault);
+        vault = _vault;
 
         apy = _apy;
         minStake = _minStake;
@@ -95,7 +98,10 @@ contract TokenStaking is Ownable, ReentrancyGuard {
 
         // Calculate and send reward
         uint256 reward = calculateReward(msg.sender);
-        require(rewardToken.transfer(msg.sender, reward), "Reward transfer failed");
+        require(
+            rewardToken.transfer(msg.sender, reward),
+            "Reward transfer failed"
+        );
 
         emit Withdrawn(msg.sender, s.amount, reward);
     }
