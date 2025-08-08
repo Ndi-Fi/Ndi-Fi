@@ -43,11 +43,7 @@ contract NDIFIVault is ERC4626, Ownable {
         _;
     }
 
-    constructor(
-        address DaiTokenAddress,
-        string memory name,
-        string memory symbol
-    )
+    constructor(address DaiTokenAddress, string memory name, string memory symbol)
         ERC4626(IERC20(DaiTokenAddress))
         ERC20(name, symbol)
         Ownable(initialOwner)
@@ -61,10 +57,7 @@ contract NDIFIVault is ERC4626, Ownable {
     }
 
     // core functions
-    function deposit(
-        uint256 amount,
-        address receiver
-    )
+    function deposit(uint256 amount, address receiver)
         public
         override
         onlyWhenNotPaused
@@ -82,11 +75,12 @@ contract NDIFIVault is ERC4626, Ownable {
         return super.deposit(amount, receiver);
     }
 
-    function withdraw(
-        uint256 amount,
-        address receiver,
-        address _owner
-    ) public override onlyWhenNotPaused returns (uint256) {
+    function withdraw(uint256 amount, address receiver, address _owner)
+        public
+        override
+        onlyWhenNotPaused
+        returns (uint256)
+    {
         if (receiver == address(0) || _owner == address(0)) {
             revert InvalidAddress();
         }
@@ -97,10 +91,7 @@ contract NDIFIVault is ERC4626, Ownable {
         return super.withdraw(amount, receiver, _owner);
     }
 
-    function mint(
-        uint256 shares,
-        address receiver
-    ) public override onlyWhenNotPaused returns (uint256) {
+    function mint(uint256 shares, address receiver) public override onlyWhenNotPaused returns (uint256) {
         if (receiver == address(0)) revert InvalidAddress();
         if (shares <= 0) revert invalidDepositAmount();
         if (shares > DAI.balanceOf(msg.sender)) revert invalidDepositAmount();
@@ -112,11 +103,12 @@ contract NDIFIVault is ERC4626, Ownable {
         return super.mint(shares, receiver);
     }
 
-    function redeem(
-        uint256 shares,
-        address receiver,
-        address _owner
-    ) public override onlyWhenNotPaused returns (uint256) {
+    function redeem(uint256 shares, address receiver, address _owner)
+        public
+        override
+        onlyWhenNotPaused
+        returns (uint256)
+    {
         if (receiver == address(0)) revert InvalidAddress();
         if (shares <= 0) revert invalidAmount();
 
@@ -130,27 +122,19 @@ contract NDIFIVault is ERC4626, Ownable {
         return super.totalAssets();
     }
 
-    function previewWithdraw(
-        uint256 DaiAsset
-    ) public view override returns (uint256) {
+    function previewWithdraw(uint256 DaiAsset) public view override returns (uint256) {
         return super.previewWithdraw(DaiAsset);
     }
 
-    function previewDeposit(
-        uint256 DaiAsset
-    ) public view override returns (uint256) {
+    function previewDeposit(uint256 DaiAsset) public view override returns (uint256) {
         return super.previewDeposit(DaiAsset);
     }
 
-    function previewMint(
-        uint256 shares
-    ) public view override returns (uint256) {
+    function previewMint(uint256 shares) public view override returns (uint256) {
         return super.previewMint(shares);
     }
 
-    function previewRedeem(
-        uint256 shares
-    ) public view override returns (uint256) {
+    function previewRedeem(uint256 shares) public view override returns (uint256) {
         return super.previewRedeem(shares);
     }
 
