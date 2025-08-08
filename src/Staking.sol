@@ -25,11 +25,7 @@ contract TokenStaking is Ownable, ReentrancyGuard {
     mapping(address => StakeInfo) public stakes;
 
     event Staked(address indexed user, uint256 amount);
-    event Withdrawn(
-        address indexed user,
-        uint256 stakedAmount,
-        uint256 rewardAmount
-    );
+    event Withdrawn(address indexed user, uint256 stakedAmount, uint256 rewardAmount);
 
     error BelowMinimumStake();
     error AboveMaximumStake();
@@ -63,11 +59,7 @@ contract TokenStaking is Ownable, ReentrancyGuard {
         if (amount > maxStake) revert AboveMaximumStake();
         if (stakes[msg.sender].amount > 0) revert AlreadyStaked();
 
-        stakes[msg.sender] = StakeInfo({
-            amount: amount,
-            timestamp: block.timestamp,
-            withdrawn: false
-        });
+        stakes[msg.sender] = StakeInfo({amount: amount, timestamp: block.timestamp, withdrawn: false});
 
         // Transfer tokens to vault
         vault.depositFrom(msg.sender, amount);
@@ -98,10 +90,7 @@ contract TokenStaking is Ownable, ReentrancyGuard {
 
         // Calculate and send reward
         uint256 reward = calculateReward(msg.sender);
-        require(
-            rewardToken.transfer(msg.sender, reward),
-            "Reward transfer failed"
-        );
+        require(rewardToken.transfer(msg.sender, reward), "Reward transfer failed");
 
         emit Withdrawn(msg.sender, s.amount, reward);
     }
