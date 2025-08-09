@@ -4,13 +4,12 @@ pragma solidity ^0.8.19;
 import {ERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
-import {Vault} from "./Vault.sol";
-
+import {NDIFIVault} from "./NDI-FIVAULT.sol";
 
 contract TokenStaking is Ownable, ReentrancyGuard {
-    ERC20 public immutable stakeToken;  // Token X
+    ERC20 public immutable stakeToken; // Token X
     ERC20 public immutable rewardToken;
-    IVault public immutable vault;
+    NDIFIVault public immutable vault;
 
     uint256 public immutable apy;
     uint256 public immutable minStake;
@@ -38,7 +37,7 @@ contract TokenStaking is Ownable, ReentrancyGuard {
     constructor(
         address _stakeToken,
         address _rewardToken,
-        address _vault,
+        // address _vault,
         address initialOwner,
         uint256 _apy,
         uint256 _minStake,
@@ -47,7 +46,6 @@ contract TokenStaking is Ownable, ReentrancyGuard {
     ) Ownable(initialOwner) {
         stakeToken = ERC20(_stakeToken);
         rewardToken = ERC20(_rewardToken);
-        vault = IVault(_vault);
 
         apy = _apy;
         minStake = _minStake;
@@ -60,14 +58,10 @@ contract TokenStaking is Ownable, ReentrancyGuard {
         if (amount > maxStake) revert AboveMaximumStake();
         if (stakes[msg.sender].amount > 0) revert AlreadyStaked();
 
-        stakes[msg.sender] = StakeInfo({
-            amount: amount,
-            timestamp: block.timestamp,
-            withdrawn: false
-        });
+        stakes[msg.sender] = StakeInfo({amount: amount, timestamp: block.timestamp, withdrawn: false});
 
         // Transfer tokens to vault
-        vault.depositFrom(msg.sender, amount);
+        // vault.depositFrom(msg.sender, amount);
 
         emit Staked(msg.sender, amount);
     }
@@ -91,7 +85,7 @@ contract TokenStaking is Ownable, ReentrancyGuard {
         s.withdrawn = true;
 
         // Send stake back from vault
-        vault.releaseTo(msg.sender, s.amount);
+        // vault.releaseTo(msg.sender, s.amount);
 
         // Calculate and send reward
         uint256 reward = calculateReward(msg.sender);
