@@ -4,7 +4,7 @@ pragma solidity ^0.8.13;
 import "forge-std/Test.sol";
 
 contract PlaceholderTest is Test {
-    function testPlaceholder() public {
+    function test_placeholder() public {
         assertTrue(true);
     }
 }
