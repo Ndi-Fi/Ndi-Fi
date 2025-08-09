@@ -7,5 +7,13 @@ import {TokenStaking} from "../src/Staking.sol";
 
 //Test
 contract stakingTest is Test {
+    TokenStaking public stake;
+    address public stake1;
+    
+
     function setUp() public {}
+
+    function test_stake() public{}
+
+
 }
