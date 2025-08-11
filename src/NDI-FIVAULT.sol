@@ -42,6 +42,7 @@ contract NDIFIVault is ERC4626, Ownable {
         }
         _;
     }
+
     constructor(address DaiTokenAddress)
         ERC4626(IERC20(DaiTokenAddress))
         ERC20("NDITOKEN", "NDI")
