@@ -1,5 +1,4 @@
 //SPDX-License-Identifier: MIT
-
 pragma solidity ^0.8.13;
 
 import {ERC4626} from "lib/openzeppelin-contracts/contracts/token/ERC20/extensions/ERC4626.sol";
@@ -11,17 +10,14 @@ import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 
 contract NDIFIVault is ERC4626, Ownable {
     using SafeERC20 for IERC20;
-    using Math for uint256;
 
-    IERC20 public immutable DAI;
     uint256 public stakingCap = 100_000 * 1e18; //100,000 Dai
     bool public maintenanceOngoing;
-    address public initialOwner;
 
     error underMaintenance();
     error stakingCapExceeded();
     error onlyOwnerAction();
-    error InvalidAddress();
+    error invalidAddress();
     error invalidDepositAmount();
     error invalidWithdrawAmount();
     error invalidAmount();
@@ -31,105 +27,61 @@ contract NDIFIVault is ERC4626, Ownable {
     event redeemed();
     event minted(uint256 shares);
 
-    modifier whenNotActive() {
+    modifier notUnderMaintenance() {
         if (maintenanceOngoing == true) revert underMaintenance();
         _;
     }
 
-    modifier withinStakingCap(uint256 amount) {
-        if (super.totalAssets() + amount > stakingCap) {
-            revert stakingCapExceeded();
-        }
-        _;
-    }
-
-    constructor(address DaiTokenAddress)
+    constructor(address DaiTokenAddress, address initialOwner)
         ERC4626(IERC20(DaiTokenAddress))
         ERC20("NDITOKEN", "NDI")
         Ownable(initialOwner)
     {
-        // name = "NDITOKEN";
-        // symbol = "NDI";
-        if (DaiTokenAddress == address(0)) revert InvalidAddress();
-
-        DAI = IERC20(DaiTokenAddress);
+        if (DaiTokenAddress == address(0)) revert invalidAddress();
     }
 
     // core functions
-    function deposit(uint256 amount, address receiver)
-        public
-        override
-        whenNotActive
-        withinStakingCap(amount)
-        returns (uint256)
-    {
+    function deposit(uint256 amount, address receiver) public override notUnderMaintenance returns (uint256) {
         if (amount <= 0) revert invalidDepositAmount();
-        if (receiver == address(0)) revert InvalidAddress();
-        if (amount > DAI.balanceOf(msg.sender)) revert invalidDepositAmount();
-        if (amount > DAI.allowance(msg.sender, address(this))) {
-            revert invalidDepositAmount();
-        }
+        if (receiver == address(0)) revert invalidAddress();
+        if (super.totalAssets() + amount > stakingCap) revert stakingCapExceeded();
 
-        emit deposited(amount);
         return super.deposit(amount, receiver);
     }
 
     function withdraw(uint256 amount, address receiver, address _owner)
         public
         override
-        whenNotActive
+        notUnderMaintenance
         returns (uint256)
     {
         if (receiver == address(0) || _owner == address(0)) {
-            revert InvalidAddress();
+            revert invalidAddress();
         }
-        if (amount > super.balanceOf(msg.sender)) revert invalidWithdrawAmount();
-
-        emit withdrawSuccessful();
 
         return super.withdraw(amount, receiver, _owner);
     }
 
-    function mint(uint256 shares, address receiver) public override whenNotActive returns (uint256) {
-        if (receiver == address(0)) revert InvalidAddress();
+    function mint(uint256 shares, address receiver) public override notUnderMaintenance returns (uint256) {
+        if (receiver == address(0)) revert invalidAddress();
         if (shares <= 0) revert invalidDepositAmount();
-        if (shares > DAI.balanceOf(msg.sender)) revert invalidDepositAmount();
-        if (shares > DAI.allowance(msg.sender, address(this))) {
-            revert invalidDepositAmount();
-        }
 
         emit minted(shares);
         return super.mint(shares, receiver);
     }
 
-    function redeem(uint256 shares, address receiver, address _owner) public override whenNotActive returns (uint256) {
-        if (receiver == address(0)) revert InvalidAddress();
+    function redeem(uint256 shares, address receiver, address _owner)
+        public
+        override
+        notUnderMaintenance
+        returns (uint256)
+    {
+        if (receiver == address(0)) revert invalidAddress();
         if (shares <= 0) revert invalidAmount();
 
         emit redeemed();
 
         return super.redeem(shares, receiver, _owner);
-    }
-
-    //VIEW FUNCTIONS
-    function totalAssets() public view override returns (uint256) {
-        return super.totalAssets();
-    }
-
-    function previewWithdraw(uint256 DaiAsset) public view override returns (uint256) {
-        return super.previewWithdraw(DaiAsset);
-    }
-
-    function previewDeposit(uint256 DaiAsset) public view override returns (uint256) {
-        return super.previewDeposit(DaiAsset);
-    }
-
-    function previewMint(uint256 shares) public view override returns (uint256) {
-        return super.previewMint(shares);
-    }
-
-    function previewRedeem(uint256 shares) public view override returns (uint256) {
-        return super.previewRedeem(shares);
     }
 
     //ADMIN FUNCTIONS
@@ -141,21 +93,23 @@ contract NDIFIVault is ERC4626, Ownable {
         maintenanceOngoing = false;
     }
 
-    // function emergencyWithdraw() public onlyOwner {
-    //     uint256 balance = DAI.balanceOf(address(this));
-    //     if (balance > 0) {
-    //         DAI.safeTransfer(initialOwner, balance);
-    //         emit withdrawSuccessful();
-    //     }
-    // }
+    function emergencyWithdraw(address to, address initialOwner) public onlyOwner {
+        if (to == address(0)) revert invalidAddress();
+        uint256 balance = IERC20(asset()).balanceOf(address(this));
+        if (balance > 0) {
+            IERC20(asset()).safeTransfer(initialOwner, balance);
+            emit withdrawSuccessful();
+        }
+    }
 
-    // function emergencyRedeem() public onlyOwner {
-    //     uint256 shares = super.balanceOf(address(this));
-    //     if (shares > 0) {
-    //         super.redeem(shares, initialOwner, address(this));
-    //         emit redeemed();
-    //     }
-    // }
+    function emergencyRedeem(address to) public onlyOwner {
+        if (to == address(0)) revert invalidAddress();
+        uint256 shares = super.balanceOf(address(this));
+        if (shares > 0) {
+            emit redeemed();
+            super.redeem(shares, to, address(this));
+        }
+    }
 
     function setStakingCap(uint256 newCap) public onlyOwner {
         if (newCap <= 0) revert invalidAmount();
