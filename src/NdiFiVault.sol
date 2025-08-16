@@ -32,7 +32,10 @@ contract NdiFiVault is ERC4626, Ownable {
         _;
     }
 
-    constructor(address DaiTokenAddress, address initialOwner)
+    constructor(
+        address DaiTokenAddress,
+        address initialOwner
+    )
         ERC4626(IERC20(DaiTokenAddress))
         ERC20("NDITOKEN", "NDI")
         Ownable(initialOwner)
@@ -41,9 +44,13 @@ contract NdiFiVault is ERC4626, Ownable {
     }
 
     // core functions
-    function deposit(uint256 amount, address receiver) public override notUnderMaintenance returns (uint256) {
+    function deposit(
+        uint256 amount,
+        address receiver
+    ) public override notUnderMaintenance returns (uint256) {
         if (amount <= 0) revert invalidDepositAmount();
         if (receiver == address(0)) revert invalidAddress();
+
         if (super.totalAssets() + amount > stakingCap) {
             revert stakingCapExceeded();
         }
@@ -51,12 +58,11 @@ contract NdiFiVault is ERC4626, Ownable {
         return super.deposit(amount, receiver);
     }
 
-    function withdraw(uint256 amount, address receiver, address _owner)
-        public
-        override
-        notUnderMaintenance
-        returns (uint256)
-    {
+    function withdraw(
+        uint256 amount,
+        address receiver,
+        address _owner
+    ) public override notUnderMaintenance returns (uint256) {
         if (receiver == address(0) || _owner == address(0)) {
             revert invalidAddress();
         }
@@ -64,7 +70,10 @@ contract NdiFiVault is ERC4626, Ownable {
         return super.withdraw(amount, receiver, _owner);
     }
 
-    function mint(uint256 shares, address receiver) public override notUnderMaintenance returns (uint256) {
+    function mint(
+        uint256 shares,
+        address receiver
+    ) public override notUnderMaintenance returns (uint256) {
         if (receiver == address(0)) revert invalidAddress();
         if (shares <= 0) revert invalidDepositAmount();
 
@@ -72,12 +81,11 @@ contract NdiFiVault is ERC4626, Ownable {
         return super.mint(shares, receiver);
     }
 
-    function redeem(uint256 shares, address receiver, address _owner)
-        public
-        override
-        notUnderMaintenance
-        returns (uint256)
-    {
+    function redeem(
+        uint256 shares,
+        address receiver,
+        address _owner
+    ) public override notUnderMaintenance returns (uint256) {
         if (receiver == address(0)) revert invalidAddress();
         if (shares <= 0) revert invalidAmount();
 
@@ -95,7 +103,10 @@ contract NdiFiVault is ERC4626, Ownable {
         maintenanceOngoing = false;
     }
 
-    function emergencyWithdraw(address to, address initialOwner) public onlyOwner {
+    function emergencyWithdraw(
+        address to,
+        address initialOwner
+    ) public onlyOwner {
         if (to == address(0)) revert invalidAddress();
         uint256 balance = IERC20(asset()).balanceOf(address(this));
         if (balance > 0) {
