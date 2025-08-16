@@ -221,7 +221,7 @@ contract NdiFiVaultTest is Test {
         uint256 amount = 100 ether;
         vm.startPrank(user);
         mockDai.approve(address(vault), amount);
-        uint256 shares = vault.deposit(amount, user);
+        vault.deposit(amount, user);
 
         assertEq(vault.maxWithdraw(user), amount);
         vault.withdraw(amount, user, user);
