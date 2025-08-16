@@ -44,9 +44,11 @@ contract NDIFIVault is ERC4626, Ownable {
     function deposit(uint256 amount, address receiver) public override notUnderMaintenance returns (uint256) {
         if (amount <= 0) revert invalidDepositAmount();
         if (receiver == address(0)) revert invalidAddress();
+
         if (super.totalAssets() + amount > stakingCap) {
             revert stakingCapExceeded();
         }
+
 
         return super.deposit(amount, receiver);
     }
