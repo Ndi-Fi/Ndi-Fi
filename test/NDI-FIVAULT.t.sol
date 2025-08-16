@@ -8,6 +8,7 @@ import {ERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol"
 // Simple mintable ERC20
 contract MockERC20 is ERC20 {
     constructor() ERC20("MockDaiToken", "MDT") {}
+
     function mint(address to, uint256 amount) public {
         _mint(to, amount);
     }
@@ -224,11 +225,7 @@ contract NDIFIVaultTest is Test {
 
         assertEq(vault.maxWithdraw(user), amount);
         vault.withdraw(amount, user, user);
-        assertEq(
-            mockDai.balanceOf(user),
-            1000 ether,
-            "user should get back all DAI"
-        );
+        assertEq(mockDai.balanceOf(user), 1000 ether, "user should get back all DAI");
         vm.stopPrank();
     }
 
@@ -242,12 +239,7 @@ contract NDIFIVaultTest is Test {
         uint256 shares = vault.mint(amount, user);
         vault.redeem(shares, user, user);
         uint256 daiReturned = mockDai.balanceOf(user);
-        assertApproxEqAbs(
-            daiReturned,
-            1000 ether,
-            1e6,
-            "user should get back nearly all DAI"
-        );
+        assertApproxEqAbs(daiReturned, 1000 ether, 1e6, "user should get back nearly all DAI");
         vm.stopPrank();
     }
 
