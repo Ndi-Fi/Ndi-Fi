@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.30;
 
 import {ERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
-import {NDIFIVault} from "./NDI-FIVAULT.sol";
+import {NdiFiVault} from "./NdiFiVault.sol";
 
-contract TokenStaking is Ownable, ReentrancyGuard {
+contract NdiFiStaking is Ownable, ReentrancyGuard {
     ERC20 public immutable stakeToken; // Token X
     ERC20 public immutable rewardToken;
-    NDIFIVault public immutable vault;
+    NdiFiVault public immutable vault;
 
     uint256 public immutable apy;
     uint256 public immutable minStake;
