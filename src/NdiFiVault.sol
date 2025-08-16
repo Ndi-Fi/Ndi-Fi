@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.30;
 
 import {ERC4626} from "lib/openzeppelin-contracts/contracts/token/ERC20/extensions/ERC4626.sol";
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
@@ -8,7 +8,7 @@ import {Math} from "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
 import {ERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 
-contract NDIFIVault is ERC4626, Ownable {
+contract NdiFiVault is ERC4626, Ownable {
     using SafeERC20 for IERC20;
 
     uint256 public stakingCap = 100_000 * 1e18; //100,000 Dai

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.30;
 
 import {Test, console} from "forge-std/Test.sol";
-import {NDIFIVault} from "../src/NDI-FIVAULT.sol";
+import {NdiFiVault} from "../src/NdiFiVault.sol";
 import {ERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 
 // Simple mintable ERC20
@@ -14,8 +14,8 @@ contract MockERC20 is ERC20 {
     }
 }
 
-contract NDIFIVaultTest is Test {
-    NDIFIVault public vault;
+contract NdiFiVaultTest is Test {
+    NdiFiVault public vault;
     MockERC20 public mockDai;
     address public admin;
     address public user;
@@ -27,7 +27,7 @@ contract NDIFIVaultTest is Test {
         attacker = address(0xdeadbeef);
 
         mockDai = new MockERC20();
-        vault = new NDIFIVault(address(mockDai), admin);
+        vault = new NdiFiVault(address(mockDai), admin);
         mockDai.mint(user, 1000 ether);
         mockDai.mint(address(this), 1000 ether);
     }
@@ -269,6 +269,6 @@ contract NDIFIVaultTest is Test {
     // ----------------------------------
     function testRevert_ZeroAssetOnDeploy() public {
         vm.expectRevert("invalidAddress()");
-        new NDIFIVault(address(0), admin);
+        new NdiFiVault(address(0), admin);
     }
 }
