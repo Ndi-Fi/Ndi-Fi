@@ -100,6 +100,7 @@ contract NdiFiVault is ERC4626, Ownable {
         if (to == address(0)) revert invalidAddress();
         uint256 balance = IERC20(asset()).balanceOf(address(this));
         if (balance > 0) {
+            // May be an error
             IERC20(asset()).safeTransfer(initialOwner, balance);
             emit withdrawSuccessful();
         }
