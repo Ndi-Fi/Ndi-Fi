@@ -4,6 +4,7 @@ pragma solidity ^0.8.30;
 import {Test, console} from "forge-std/Test.sol";
 import {NdiFiVault} from "../src/NdiFiVault.sol";
 import {ERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
+import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 
 // Simple mintable ERC20
 contract MockERC20 is ERC20 {
@@ -270,5 +271,59 @@ contract NdiFiVaultTest is Test {
     function testRevert_ZeroAssetOnDeploy() public {
         vm.expectRevert("invalidAddress()");
         new NdiFiVault(address(0), admin);
+    }
+
+    // ----------------------------------
+    // Additional Edge Cases
+    // ----------------------------------
+
+    function testRevert_EmergencyWithdrawToZeroAddress() public {
+        vm.expectRevert("invalidAddress()");
+        vault.emergencyWithdraw(address(0), admin);
+    }
+
+    function testRevert_EmergencyWithdrawByNonOwner() public {
+        vm.startPrank(attacker);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, attacker));
+        vault.emergencyWithdraw(attacker, attacker);
+    }
+
+    function testEmergencyWithdrawWithZeroBalance() public {
+        uint256 before = mockDai.balanceOf(admin);
+        vault.emergencyWithdraw(admin, admin);
+        assertEq(mockDai.balanceOf(admin), before);
+    }
+
+    function testRevert_EmergencyRedeemToZeroAddress() public {
+        vm.expectRevert("invalidAddress()");
+        vault.emergencyRedeem(address(0));
+    }
+
+    function testRevert_EmergencyRedeemByNonOwner() public {
+        vm.startPrank(attacker);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, attacker));
+        vault.emergencyRedeem(attacker);
+    }
+
+    function testRevert_SetStakingCapByNonOwner() public {
+        vm.startPrank(attacker);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, attacker));
+        vault.setStakingCap(1 ether);
+    }
+
+    function testRevert_SetStakingCapBelowTotalAssets() public {
+        vm.startPrank(user);
+        mockDai.approve(address(vault), 100 ether);
+        vault.deposit(100 ether, user);
+        vm.stopPrank();
+
+        vm.startPrank(admin);
+        vault.setStakingCap(50 ether);
+        vm.stopPrank();
+
+        vm.startPrank(user);
+        mockDai.approve(address(vault), 1 ether);
+        vm.expectRevert("stakingCapExceeded()");
+        vault.deposit(1 ether, user);
     }
 }
