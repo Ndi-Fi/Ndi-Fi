@@ -8,11 +8,14 @@ import {Math} from "lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
 import {ERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 
+
 contract NdiFiVault is ERC4626, Ownable {
     using SafeERC20 for IERC20;
 
+
     uint256 public stakingCap = 100_000 * 1e18; //100,000 Dai
     bool public maintenanceOngoing;
+
 
     error underMaintenance();
     error stakingCapExceeded();
@@ -96,22 +99,22 @@ contract NdiFiVault is ERC4626, Ownable {
         maintenanceOngoing = false;
     }
 
-    function emergencyWithdraw(address to, address initialOwner) public onlyOwner {
+    function emergencyWithdraw(address to, address _initialOwner) public onlyOwner {
         if (to == address(0)) revert invalidAddress();
         uint256 balance = IERC20(asset()).balanceOf(address(this));
         if (balance > 0) {
-            // May be an error
-            IERC20(asset()).safeTransfer(initialOwner, balance);
+            IERC20(asset()).safeTransfer(_initialOwner, balance);
             emit withdrawSuccessful();
         }
     }
 
-    function emergencyRedeem(address to) public onlyOwner {
+    //Redeeming users shares  forcefully
+    function emergencyRedeem(address from, address to) public onlyOwner {
         if (to == address(0)) revert invalidAddress();
-        uint256 shares = super.balanceOf(address(this));
+        uint256 shares = super.balanceOf(from);
         if (shares > 0) {
             emit redeemed();
-            super.redeem(shares, to, address(this));
+            super.redeem(shares, to, from);
         }
     }
 

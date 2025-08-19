@@ -5,6 +5,7 @@ import {Test, console} from "forge-std/Test.sol";
 import {NdiFiVault} from "../src/NdiFiVault.sol";
 import {ERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+//you didn't use the Ownable contract you imported or is there another reason this is here??
 
 // Simple mintable ERC20
 contract MockERC20 is ERC20 {
@@ -24,7 +25,7 @@ contract NdiFiVaultTest is Test {
 
     function setUp() public {
         admin = address(this);
-        user = address(0x1);
+        user = address(0x1);// use mkaddr instead : mkaddr(user);
         attacker = address(0xdeadbeef);
 
         mockDai = new MockERC20();
@@ -60,12 +61,13 @@ contract NdiFiVaultTest is Test {
     }
 
     function testRevert_WithdrawFromZeroAddress() public {
+        //function name: withdraw from or withdraw to??
         vm.startPrank(user);
         mockDai.approve(address(vault), 10 ether);
         vault.deposit(10 ether, user);
 
         vm.expectRevert("invalidAddress()");
-        vault.withdraw(1 ether, user, address(0));
+        vault.withdraw(1 ether, user, address(0));// we can withdraw from address zero because address 0 can't even deposit...
     }
 
     function testRevert_MintZeroShares() public {
@@ -101,13 +103,14 @@ contract NdiFiVaultTest is Test {
     // ----------------------------------
     // Cap Exceeded
     // ----------------------------------
-    // function testRevert_StakingCapExceeded() public {
-    //     vm.startPrank(user);
-    //     mockDai.approve(address(vault), type(uint256).max);
-    //     vault.deposit(100_000 ether, user);
-    //     vm.expectRevert("stakingCapExceeded()");
-    //     vault.deposit(1 wei, user);
-    // }
+
+    function testRevertStakingCapExceeded() public {
+        vm.startPrank(user);
+        mockDai.approve(address(vault), type(uint256).max);
+        vm.expectRevert(NdiFiVault.stakingCapExceeded.selector);
+        vault.deposit(100_001 * 1e18, user);
+        
+    }
 
     // ----------------------------------
     // Pausing behaviour: all fails if paused
@@ -147,22 +150,22 @@ contract NdiFiVaultTest is Test {
     // ----------------------------------
     // OnlyOwner tests
     // ----------------------------------
-    // function testOnlyOwnerModifiers() public {
-    //     vm.startPrank(attacker);
-    //     vm.expectRevert("Ownable: caller is not the owner");
-    //     vault.pauseVault();
+    function testOnlyOwnerModifiers() public {
+        vm.startPrank(attacker);
+        vm.expectRevert();
+        vault.pauseVault();
 
-    //     vm.expectRevert("Ownable: caller is not the owner");
-    //     vault.unpauseVault();
+        vm.expectRevert();
+        vault.unpauseVault();
 
-    //     mockDai.mint(address(vault), 1 ether);
-    //     vm.expectRevert("Ownable: caller is not the owner");
-    //     vault.emergencyWithdraw(attacker, attacker);
+        mockDai.mint(address(vault), 1 ether);
+        vm.expectRevert();
+        vault.emergencyWithdraw(attacker, attacker);
 
-    //     vm.expectRevert("Ownable: caller is not the owner");
-    //     vault.setStakingCap(1 ether);
-    //     vm.stopPrank();
-    // }
+        vm.expectRevert();
+        vault.setStakingCap(1 ether);
+        vm.stopPrank();
+    }
 
     // ----------------------------------
     // Emergency Withdraw/ emergencyRedeem works as intended
@@ -182,21 +185,20 @@ contract NdiFiVaultTest is Test {
         assertEq(mockDai.balanceOf(admin), before + 100 ether);
     }
 
-    // function testEmergencyRedeemTransfersAdminShares() public {
-    //     // User deposits and transfers shares to ADMIN
-    //     vm.startPrank(user);
-    //     mockDai.approve(address(vault), 100 ether);
-    //     vault.deposit(100 ether, user);
-    //     vault.transfer(admin, 100 ether);
-    //     vm.stopPrank();
+     function testEmergencyRedeemTransfersAdminShares() public {
+        // User deposits and transfers shares to ADMIN
+        vm.startPrank(user);
+        mockDai.approve(address(vault), 100 * 1e18);
+           console.log("token balance of user:", mockDai.balanceOf(user));
+        vault.deposit(100 * 1e18, user);
+        console.log("token balance of user:", mockDai.balanceOf(user));
+        vm.stopPrank();
 
-    //     uint256 before = mockDai.balanceOf(admin);
+        vm.prank(admin);
+        vault.emergencyRedeem(user, user);
 
-    //     vault.emergencyRedeem(admin);
-
-    //     assertEq(mockDai.balanceOf(address(vault)), 0);
-    //     assertEq(mockDai.balanceOf(admin), before + 100 ether);
-    // }
+        assertEq(vault.balanceOf(user), 0);
+    }
 
     // ----------------------------------
     // setStakingCap edge
@@ -296,13 +298,13 @@ contract NdiFiVaultTest is Test {
 
     function testRevert_EmergencyRedeemToZeroAddress() public {
         vm.expectRevert("invalidAddress()");
-        vault.emergencyRedeem(address(0));
+        vault.emergencyRedeem(user,address(0));
     }
 
     function testRevert_EmergencyRedeemByNonOwner() public {
         vm.startPrank(attacker);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, attacker));
-        vault.emergencyRedeem(attacker);
+        vault.emergencyRedeem(user, attacker);
     }
 
     function testRevert_SetStakingCapByNonOwner() public {
