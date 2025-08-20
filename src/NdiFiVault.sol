@@ -52,7 +52,7 @@ contract NdiFiVault is ERC4626, Ownable {
         return super.deposit(amount, receiver);
     }
 
-    function withdraw(uint256 amount, address receiver, address _owner)
+    function withdraw(uint256 assets, address receiver, address _owner)
         public
         override
         notUnderMaintenance
@@ -62,7 +62,7 @@ contract NdiFiVault is ERC4626, Ownable {
             revert invalidAddress();
         }
 
-        return super.withdraw(amount, receiver, _owner);
+        return super.withdraw(assets, receiver, _owner);
     }
 
     function mint(uint256 shares, address receiver) public override notUnderMaintenance returns (uint256) {
@@ -96,22 +96,23 @@ contract NdiFiVault is ERC4626, Ownable {
         maintenanceOngoing = false;
     }
 
-    function emergencyWithdraw(address to, address initialOwner) public onlyOwner {
+    function emergencyWithdraw(address to, address _initialOwner) public onlyOwner {
         if (to == address(0)) revert invalidAddress();
         uint256 balance = IERC20(asset()).balanceOf(address(this));
         if (balance > 0) {
-            // May be an error
-            IERC20(asset()).safeTransfer(initialOwner, balance);
+            IERC20(asset()).safeTransfer(_initialOwner, balance);
             emit withdrawSuccessful();
         }
     }
 
-    function emergencyRedeem(address to) public onlyOwner {
+    //Redeeming users shares  forcefully
+    function emergencyRedeem(address from, address to) public onlyOwner {
         if (to == address(0)) revert invalidAddress();
-        uint256 shares = super.balanceOf(address(this));
+        uint256 shares = super.balanceOf(from);
+
         if (shares > 0) {
-            emit redeemed();
-            super.redeem(shares, to, address(this));
+            uint256 assets = super.previewRedeem(shares);
+            _withdraw(msg.sender, from, to, assets, shares);
         }
     }
 
