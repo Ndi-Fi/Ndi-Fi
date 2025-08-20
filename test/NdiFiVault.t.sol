@@ -25,7 +25,7 @@ contract NdiFiVaultTest is Test {
 
     function setUp() public {
         admin = address(this);
-        user = address(0x1);// use mkaddr instead : mkaddr(user);
+        user = address(0x1); // use mkaddr instead : mkaddr(user);
         attacker = address(0xdeadbeef);
 
         mockDai = new MockERC20();
@@ -67,7 +67,7 @@ contract NdiFiVaultTest is Test {
         vault.deposit(10 ether, user);
 
         vm.expectRevert("invalidAddress()");
-        vault.withdraw(1 ether, user, address(0));// we can withdraw from address zero because address 0 can't even deposit...
+        vault.withdraw(1 ether, user, address(0)); // we can withdraw from address zero because address 0 can't even deposit...
     }
 
     function testRevert_MintZeroShares() public {
@@ -109,7 +109,6 @@ contract NdiFiVaultTest is Test {
         mockDai.approve(address(vault), type(uint256).max);
         vm.expectRevert(NdiFiVault.stakingCapExceeded.selector);
         vault.deposit(100_001 * 1e18, user);
-        
     }
 
     // ----------------------------------
@@ -185,11 +184,11 @@ contract NdiFiVaultTest is Test {
         assertEq(mockDai.balanceOf(admin), before + 100 ether);
     }
 
-     function testEmergencyRedeemTransfersUserShares() public {
+    function testEmergencyRedeemTransfersUserShares() public {
         // User deposits and transfers shares to ADMIN
         vm.startPrank(user);
         mockDai.approve(address(vault), 100 * 1e18);
-          console.log("mockdai balance:", mockDai.balanceOf(user));
+        console.log("mockdai balance:", mockDai.balanceOf(user));
         vault.deposit(100 * 1e18, user);
         console.log("mockDai balance after deposit:", mockDai.balanceOf(user));
         console.log("vault balance of dai", mockDai.balanceOf(address(vault)));
@@ -213,7 +212,7 @@ contract NdiFiVaultTest is Test {
 
     function testSetStakingCapLargeValue() public {
         uint256 before = vault.stakingCap();
-        console.log('vault staking cap: ', before);
+        console.log("vault staking cap: ", before);
         vm.prank(admin);
         vault.setStakingCap(type(uint256).max);
         assertEq(vault.stakingCap(), type(uint256).max);
@@ -304,7 +303,7 @@ contract NdiFiVaultTest is Test {
 
     function testRevert_EmergencyRedeemToZeroAddress() public {
         vm.expectRevert("invalidAddress()");
-        vault.emergencyRedeem(user,address(0));
+        vault.emergencyRedeem(user, address(0));
     }
 
     function testRevert_EmergencyRedeemByNonOwner() public {
