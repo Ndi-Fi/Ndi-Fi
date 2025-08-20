@@ -185,18 +185,21 @@ contract NdiFiVaultTest is Test {
         assertEq(mockDai.balanceOf(admin), before + 100 ether);
     }
 
-     function testEmergencyRedeemTransfersAdminShares() public {
+     function testEmergencyRedeemTransfersUserShares() public {
         // User deposits and transfers shares to ADMIN
         vm.startPrank(user);
         mockDai.approve(address(vault), 100 * 1e18);
-           console.log("token balance of user:", mockDai.balanceOf(user));
+          console.log("mockdai balance:", mockDai.balanceOf(user));
         vault.deposit(100 * 1e18, user);
-        console.log("token balance of user:", mockDai.balanceOf(user));
+        console.log("mockDai balance after deposit:", mockDai.balanceOf(user));
+        console.log("vault balance of dai", mockDai.balanceOf(address(vault)));
+        vault.approve(admin, type(uint256).max);
         vm.stopPrank();
 
         vm.prank(admin);
         vault.emergencyRedeem(user, user);
 
+        assertEq(mockDai.balanceOf(user), 1000 * 1e18);
         assertEq(vault.balanceOf(user), 0);
     }
 
@@ -208,14 +211,17 @@ contract NdiFiVaultTest is Test {
         vault.setStakingCap(0);
     }
 
-    // function testSetStakingCapLargeValue() public {
-    //     uint256 before = vault.stakingCap();
-    //     vault.setStakingCap(type(uint256).max);
-    //     assertEq(vault.stakingCap(), type(uint256).max);
-    //     // try depositing
-    //     mockDai.approve(address(vault), type(uint256).max);
-    //     vault.deposit(10_000_000 ether, admin);
-    // }
+    function testSetStakingCapLargeValue() public {
+        uint256 before = vault.stakingCap();
+        console.log('vault staking cap: ', before);
+        vm.prank(admin);
+        vault.setStakingCap(type(uint256).max);
+        assertEq(vault.stakingCap(), type(uint256).max);
+        // try depositing
+        mockDai.approve(address(vault), type(uint256).max);
+        vm.prank(admin);
+        vault.deposit(1000 * 1e18, admin);
+    }
 
     // ----------------------------------
     // Invariant: deposit->withdraw roundtrip maintains asset parity

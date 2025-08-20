@@ -55,7 +55,7 @@ contract NdiFiVault is ERC4626, Ownable {
         return super.deposit(amount, receiver);
     }
 
-    function withdraw(uint256 amount, address receiver, address _owner)
+    function withdraw(uint256 assets, address receiver, address _owner)
         public
         override
         notUnderMaintenance
@@ -65,7 +65,7 @@ contract NdiFiVault is ERC4626, Ownable {
             revert invalidAddress();
         }
 
-        return super.withdraw(amount, receiver, _owner);
+        return super.withdraw(assets, receiver, _owner);
     }
 
     function mint(uint256 shares, address receiver) public override notUnderMaintenance returns (uint256) {
@@ -112,9 +112,10 @@ contract NdiFiVault is ERC4626, Ownable {
     function emergencyRedeem(address from, address to) public onlyOwner {
         if (to == address(0)) revert invalidAddress();
         uint256 shares = super.balanceOf(from);
+      
         if (shares > 0) {
-            emit redeemed();
-            super.redeem(shares, to, from);
+            uint256 assets = super.previewRedeem(shares);
+            _withdraw(msg.sender,  from, to, assets, shares);
         }
     }
 
