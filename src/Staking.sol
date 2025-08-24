@@ -16,17 +16,15 @@ contract TokenStaking is Ownable, ReentrancyGuard {
     uint256 public immutable minStake;
     uint256 public immutable maxStake;
     uint256 public immutable minDuration;
+struct StakeInfo {
+    uint256 amount;
+    uint256 timestamp;
+    bool withdrawn;
+}
 
-    struct StakeInfo {
-        uint256 amount;
-        uint256 timestamp;
-        bool withdrawn;
-    }
-
-    mapping(address => StakeInfo) public stakes;
-
-    event Staked(address indexed user, uint256 amount);
-    event Withdrawn(address indexed user, uint256 stakedAmount, uint256 rewardAmount);
+mapping(address => StakeInfo) public stakes;
+event Staked(address indexed user, uint256 amount);
+event Withdrawn(address indexed user, uint256 stakedAmount, uint256 rewardAmount);
 
     error BelowMinimumStake();
     error AboveMaximumStake();
