@@ -1,0 +1,56 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.19;
+
+/// @title FeeLib
+/// @notice Math library for fee calculation in staking/lending protocols.
+/// @dev Fees are represented in basis points (bps). 10000 = 100%
+library FeeLib {
+    uint256 internal constant BPS_DENOMINATOR = 10_000; // 100%
+
+    /// @notice Clamp fee bps to max 10000
+    function clampBps(uint256 bps) internal pure returns (uint16) {
+        if (bps > BPS_DENOMINATOR) return uint16(BPS_DENOMINATOR);
+        return uint16(bps);
+    }
+
+    /// @notice Calculate fee from amount using bps.
+    function percentOf(uint256 amount, uint256 bps) internal pure returns (uint256) {
+        if (amount == 0 || bps == 0) return 0;
+        return (amount * bps) / BPS_DENOMINATOR;
+    }
+
+    /// @notice Apply deposit fee, return (fee, netAmount)
+    function calcDeposit(uint256 assets, uint16 depositFeeBps) internal pure returns (uint256 fee, uint256 netAssets) {
+        fee = percentOf(assets, depositFeeBps);
+        unchecked { netAssets = assets - fee; }
+    }
+
+    /// @notice Apply withdrawal fee, return (fee, netPayout)
+    function calcWithdrawal(uint256 assets, uint16 withdrawalFeeBps) internal pure returns (uint256 fee, uint256 payout) {
+        fee = percentOf(assets, withdrawalFeeBps);
+        unchecked { payout = assets - fee; }
+    }
+
+    /// @notice Apply performance fee on rewards, return (fee, netReward)
+    function calcPerformance(uint256 reward, uint16 performanceFeeBps) internal pure returns (uint256 fee, uint256 netReward) {
+        fee = percentOf(reward, performanceFeeBps);
+        unchecked { netReward = reward - fee; }
+    }
+
+    /// @notice Early withdrawal penalty that linearly decreases over time
+    function calcLinearPenalty(
+        uint256 amount,
+        uint256 start,
+        uint256 minDuration,
+        uint256 nowTs,
+        uint16 maxPenaltyBps
+    ) internal pure returns (uint256 penalty) {
+        if (minDuration == 0 || nowTs >= start + minDuration || maxPenaltyBps == 0) {
+            return 0;
+        }
+
+        uint256 remaining = (start + minDuration) - nowTs;
+        uint256 effectiveBps = (uint256(maxPenaltyBps) * remaining) / minDuration;
+        penalty = percentOf(amount, effectiveBps);
+    }
+}
