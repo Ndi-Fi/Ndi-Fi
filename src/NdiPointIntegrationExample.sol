@@ -11,16 +11,16 @@ import "./NdiPoint.sol";
 contract NdiPointIntegrationExample {
     NdiPoint public immutable ndiPoint;
     address public owner;
-    
+
     // Staking related variables
     mapping(address => uint256) public stakedBalance;
     mapping(address => uint256) public lastRewardUpdate;
     uint256 public rewardRate = 100; // 100 NDI points per day per token staked
-    
+
     // Lending related variables
     mapping(address => uint256) public lentAmount;
     mapping(address => uint256) public borrowedAmount;
-    
+
     event Staked(address indexed user, uint256 amount);
     event Unstaked(address indexed user, uint256 amount);
     event RewardsClaimed(address indexed user, uint256 amount);
@@ -41,13 +41,13 @@ contract NdiPointIntegrationExample {
      */
     function stake(uint256 amount) external {
         require(amount > 0, "Amount must be greater than zero");
-        
+
         // Update rewards before changing stake
         _updateRewards(msg.sender);
-        
+
         // Update staked balance
         stakedBalance[msg.sender] += amount;
-        
+
         emit Staked(msg.sender, amount);
     }
 
@@ -56,13 +56,13 @@ contract NdiPointIntegrationExample {
      */
     function unstake(uint256 amount) external {
         require(stakedBalance[msg.sender] >= amount, "Insufficient staked balance");
-        
+
         // Update rewards before changing stake
         _updateRewards(msg.sender);
-        
+
         // Update staked balance
         stakedBalance[msg.sender] -= amount;
-        
+
         emit Unstaked(msg.sender, amount);
     }
 
@@ -72,12 +72,12 @@ contract NdiPointIntegrationExample {
     function claimStakingRewards() external {
         uint256 rewards = calculatePendingRewards(msg.sender);
         require(rewards > 0, "No rewards to claim");
-        
+
         lastRewardUpdate[msg.sender] = block.timestamp;
-        
+
         // Distribute NDI points as rewards
         ndiPoint.distributeReward(msg.sender, rewards, "Staking rewards");
-        
+
         emit RewardsClaimed(msg.sender, rewards);
     }
 
@@ -86,14 +86,14 @@ contract NdiPointIntegrationExample {
      */
     function lend(uint256 amount) external {
         require(amount > 0, "Amount must be greater than zero");
-        
+
         lentAmount[msg.sender] += amount;
-        
+
         // Calculate lending reward (1% of lent amount in NDI points)
-        uint256 reward = (amount * 1 * 10**18) / 100; // 1% reward in NDI points
-        
+        uint256 reward = (amount * 1 * 10 ** 18) / 100; // 1% reward in NDI points
+
         ndiPoint.distributeReward(msg.sender, reward, "Lending incentive");
-        
+
         emit LendingReward(msg.sender, reward, "Lending");
     }
 
@@ -102,26 +102,23 @@ contract NdiPointIntegrationExample {
      */
     function borrow(uint256 amount) external {
         require(amount > 0, "Amount must be greater than zero");
-        
+
         borrowedAmount[msg.sender] += amount;
-        
+
         // Calculate borrowing reward (0.5% of borrowed amount in NDI points)
-        uint256 reward = (amount * 5 * 10**17) / 100; // 0.5% reward in NDI points
-        
+        uint256 reward = (amount * 5 * 10 ** 17) / 100; // 0.5% reward in NDI points
+
         ndiPoint.distributeReward(msg.sender, reward, "Borrowing incentive");
-        
+
         emit LendingReward(msg.sender, reward, "Borrowing");
     }
 
     /**
      * @dev Batch reward distribution for multiple users (weekly distribution example)
      */
-    function distributeWeeklyRewards(
-        address[] calldata users,
-        uint256[] calldata amounts
-    ) external onlyOwner {
+    function distributeWeeklyRewards(address[] calldata users, uint256[] calldata amounts) external onlyOwner {
         require(users.length == amounts.length, "Array length mismatch");
-        
+
         ndiPoint.distributeRewards(users, amounts, "Weekly platform rewards");
     }
 
@@ -132,10 +129,10 @@ contract NdiPointIntegrationExample {
         if (stakedBalance[user] == 0) {
             return 0;
         }
-        
+
         uint256 timeDiff = block.timestamp - lastRewardUpdate[user];
-        uint256 dailyReward = (stakedBalance[user] * rewardRate * 10**18) / 1e18;
-        
+        uint256 dailyReward = (stakedBalance[user] * rewardRate * 10 ** 18) / 1e18;
+
         return (dailyReward * timeDiff) / 1 days;
     }
 
@@ -155,13 +152,11 @@ contract NdiPointIntegrationExample {
     /**
      * @dev Get user's total activity summary
      */
-    function getUserActivitySummary(address user) external view returns (
-        uint256 staked,
-        uint256 lent,
-        uint256 borrowed,
-        uint256 pendingRewards,
-        uint256 ndiBalance
-    ) {
+    function getUserActivitySummary(address user)
+        external
+        view
+        returns (uint256 staked, uint256 lent, uint256 borrowed, uint256 pendingRewards, uint256 ndiBalance)
+    {
         staked = stakedBalance[user];
         lent = lentAmount[user];
         borrowed = borrowedAmount[user];

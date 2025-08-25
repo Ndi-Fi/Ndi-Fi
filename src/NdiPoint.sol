@@ -28,13 +28,13 @@ contract NdiPoint is ERC20, ERC20Burnable, ERC20Pausable, AccessControl, ERC20Pe
     bytes32 public constant REWARD_DISTRIBUTOR_ROLE = keccak256("REWARD_DISTRIBUTOR_ROLE");
 
     // Token configuration
-    uint256 public constant MAX_SUPPLY = 1_000_000_000 * 10**18; // 1 billion tokens max supply
-    uint256 public constant INITIAL_SUPPLY = 100_000_000 * 10**18; // 100 million initial supply
+    uint256 public constant MAX_SUPPLY = 1_000_000_000 * 10 ** 18; // 1 billion tokens max supply
+    uint256 public constant INITIAL_SUPPLY = 100_000_000 * 10 ** 18; // 100 million initial supply
 
     // Reward and staking related variables
     mapping(address => uint256) public lastRewardClaim;
     mapping(address => bool) public isAuthorizedContract;
-    
+
     // Events
     event RewardDistributed(address indexed recipient, uint256 amount, string reason);
     event ContractAuthorized(address indexed contractAddress, bool authorized);
@@ -44,12 +44,9 @@ contract NdiPoint is ERC20, ERC20Burnable, ERC20Pausable, AccessControl, ERC20Pe
      * @dev Constructor that sets up the token with initial parameters
      * @param initialOwner The address that will be granted the DEFAULT_ADMIN_ROLE
      */
-    constructor(address initialOwner) 
-        ERC20("Ndi-Point", "NDI") 
-        ERC20Permit("Ndi-Point") 
-    {
+    constructor(address initialOwner) ERC20("Ndi-Point", "NDI") ERC20Permit("Ndi-Point") {
         require(initialOwner != address(0), "NdiPoint: initial owner cannot be zero address");
-        
+
         // Grant roles to the initial owner
         _grantRole(DEFAULT_ADMIN_ROLE, initialOwner);
         _grantRole(PAUSER_ROLE, initialOwner);
@@ -77,16 +74,16 @@ contract NdiPoint is ERC20, ERC20Burnable, ERC20Pausable, AccessControl, ERC20Pe
      * @param amounts Array of amounts corresponding to each recipient
      * @param reason Reason for the reward distribution
      */
-    function distributeRewards(
-        address[] calldata recipients,
-        uint256[] calldata amounts,
-        string calldata reason
-    ) external onlyRole(REWARD_DISTRIBUTOR_ROLE) nonReentrant {
+    function distributeRewards(address[] calldata recipients, uint256[] calldata amounts, string calldata reason)
+        external
+        onlyRole(REWARD_DISTRIBUTOR_ROLE)
+        nonReentrant
+    {
         require(recipients.length == amounts.length, "NdiPoint: arrays length mismatch");
         require(recipients.length > 0, "NdiPoint: empty arrays");
 
         uint256 totalAmount = 0;
-        
+
         // Calculate total amount needed
         for (uint256 i = 0; i < amounts.length; i++) {
             totalAmount += amounts[i];
@@ -98,10 +95,10 @@ contract NdiPoint is ERC20, ERC20Burnable, ERC20Pausable, AccessControl, ERC20Pe
         for (uint256 i = 0; i < recipients.length; i++) {
             require(recipients[i] != address(0), "NdiPoint: cannot distribute to zero address");
             require(amounts[i] > 0, "NdiPoint: amount must be greater than zero");
-            
+
             _mint(recipients[i], amounts[i]);
             lastRewardClaim[recipients[i]] = block.timestamp;
-            
+
             emit RewardDistributed(recipients[i], amounts[i], reason);
         }
     }
@@ -112,18 +109,17 @@ contract NdiPoint is ERC20, ERC20Burnable, ERC20Pausable, AccessControl, ERC20Pe
      * @param amount Amount of tokens to reward
      * @param reason Reason for the reward
      */
-    function distributeReward(
-        address recipient,
-        uint256 amount,
-        string calldata reason
-    ) external onlyRole(REWARD_DISTRIBUTOR_ROLE) {
+    function distributeReward(address recipient, uint256 amount, string calldata reason)
+        external
+        onlyRole(REWARD_DISTRIBUTOR_ROLE)
+    {
         require(recipient != address(0), "NdiPoint: cannot distribute to zero address");
         require(amount > 0, "NdiPoint: amount must be greater than zero");
         require(totalSupply() + amount <= MAX_SUPPLY, "NdiPoint: reward distribution would exceed max supply");
 
         _mint(recipient, amount);
         lastRewardClaim[recipient] = block.timestamp;
-        
+
         emit RewardDistributed(recipient, amount, reason);
     }
 
@@ -132,10 +128,7 @@ contract NdiPoint is ERC20, ERC20Burnable, ERC20Pausable, AccessControl, ERC20Pe
      * @param contractAddress The contract address to authorize/deauthorize
      * @param authorized Whether the contract should be authorized
      */
-    function setContractAuthorization(address contractAddress, bool authorized) 
-        external 
-        onlyRole(DEFAULT_ADMIN_ROLE) 
-    {
+    function setContractAuthorization(address contractAddress, bool authorized) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(contractAddress != address(0), "NdiPoint: cannot authorize zero address");
         isAuthorizedContract[contractAddress] = authorized;
         emit ContractAuthorized(contractAddress, authorized);
@@ -161,14 +154,10 @@ contract NdiPoint is ERC20, ERC20Burnable, ERC20Pausable, AccessControl, ERC20Pe
      * @param to The address to send the recovered tokens to
      * @param amount The amount of tokens to recover
      */
-    function recoverTokens(
-        address tokenAddress,
-        address to,
-        uint256 amount
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function recoverTokens(address tokenAddress, address to, uint256 amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(tokenAddress != address(this), "NdiPoint: cannot recover own tokens");
         require(to != address(0), "NdiPoint: cannot recover to zero address");
-        
+
         IERC20(tokenAddress).transfer(to, amount);
         emit TokensRecovered(tokenAddress, to, amount);
     }
@@ -198,10 +187,7 @@ contract NdiPoint is ERC20, ERC20Burnable, ERC20Pausable, AccessControl, ERC20Pe
 
     // The following functions are overrides required by Solidity
 
-    function _update(address from, address to, uint256 value)
-        internal
-        override(ERC20, ERC20Pausable)
-    {
+    function _update(address from, address to, uint256 value) internal override(ERC20, ERC20Pausable) {
         super._update(from, to, value);
     }
 }
