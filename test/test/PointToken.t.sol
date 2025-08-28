@@ -2,39 +2,99 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
-import "../src/YourERC20Token.sol";
+import "../src/NdiPoint.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-contract ERC20EdgeTest is Test {
-    YourERC20Token token;
-    address alice;
-    address bob;
+contract NdiPointEdgeTest is Test {
+    NdiPoint token;
+    address admin;
+    address user = makeAddr("User");
+    address other = makeAddr("Other");
 
     function setUp() public {
-        token = new YourERC20Token("TestToken", "TT", 18, 1000 ether);
-        alice = makeAddr("Alice");
-        bob = makeAddr("Bob");
-        token.transfer(alice, 100 ether);
-        token.transfer(bob, 100 ether);
+        admin = makeAddr("Admin");
+        token = new NdiPoint(admin);
     }
 
-    function testTransferToZeroReverts(uint256 amount) public {
-        vm.prank(alice);
-        vm.expectRevert("ERC20: transfer to the zero address");
-        token.transfer(address(0), amount);
+    function testRevertZeroInitialOwner() public {
+        vm.expectRevert("NdiPoint: initial owner cannot be zero address");
+        new NdiPoint(address(0));
     }
 
-    function testFuzzTransfer(uint256 amount, address to) public {
-        vm.assume(to != address(0)); // avoid zero-address
-        token.transfer(alice, 50 ether); // setup
-        vm.prank(alice);
-        // ensure we don't exceed balances
-        amount = bound(amount, 0, token.balanceOf(alice));
-        uint256 pre = token.balanceOf(to);
-        token.transfer(to, amount);
-        assertEq(token.balanceOf(to), pre + amount);
+    function testMintToZero() public {
+        vm.prank(admin);
+        vm.expectRevert("NdiPoint: cannot mint to zero address");
+        token.mint(address(0), 1);
     }
 
-    function invariant_TotalSupplyUnchanged() public view {
-        assertEq(token.totalSupply(), 1000 ether);
+    function testMintExceedMaxSupply() public {
+        vm.prank(admin);
+        uint256 huge = NdiPoint.MAX_SUPPLY() - token.totalSupply() + 1;
+        vm.expectRevert("NdiPoint: minting would exceed max supply");
+        token.mint(user, huge);
+    }
+
+    function testDistributeRewards_invalidInputs() public {
+        address ;
+        uint256 ;
+        vm.prank(admin);
+        vm.expectRevert("NdiPoint: arrays length mismatch");
+        token.distributeRewards(rec, amt, "test");
+    }
+
+    function testDistributeRewards_empty() public {
+        address ;
+        uint256 ;
+        vm.prank(admin);
+        vm.expectRevert("NdiPoint: empty arrays");
+        token.distributeRewards(rec, amt, "test");
+    }
+
+    function testDistributeRewards_zeroRecipient() public {
+        address ;
+        uint256 ;
+        rec[0] = address(0);
+        amt[0] = 1;
+        vm.prank(admin);
+        vm.expectRevert("NdiPoint: cannot distribute to zero address");
+        token.distributeRewards(rec, amt, "test");
+    }
+
+    function testDistributeReward_zeroAmount() public {
+        vm.prank(admin);
+        vm.expectRevert("NdiPoint: amount must be greater than zero");
+        token.distributeReward(user, 0, "test");
+    }
+
+    function testPauseUnpause() public {
+        vm.prank(admin);
+        token.pause();
+        vm.expectRevert(); // paused state blocks transfers
+        token.transfer(admin, 1);
+        vm.prank(admin);
+        token.unpause();
+        token.transfer(admin, 0); // should now succeed
+    }
+
+    function testBurnMoreThanBalance() public {
+        vm.prank(user);
+        vm.expectRevert(); // only you can burn, then fails for insufficient
+        token.burn(1);
+    }
+
+    function testRecoverTokens_invalid() public {
+        vm.prank(admin);
+        vm.expectRevert("NdiPoint: cannot recover own tokens");
+        token.recoverTokens(address(token), user, 1);
+    }
+
+    function invariant_TotalSupplyNeverExceedsMax() public view {
+        assert(token.totalSupply() <= NdiPoint.MAX_SUPPLY());
+    }
+
+    function testMetadataImmutability() public {
+        assertEq(token.name(), "Ndi-Point");
+        assertEq(token.symbol(), "NDI");
+        assertEq(token.decimals(), 18);
     }
 }
