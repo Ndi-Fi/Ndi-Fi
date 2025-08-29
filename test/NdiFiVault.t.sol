@@ -30,8 +30,8 @@ contract NdiFiVaultTest is Test {
 
         mockDai = new MockERC20();
         vault = new NdiFiVault(address(mockDai), admin);
-        mockDai.mint(user, 1000 ether);
-        mockDai.mint(address(this), 1000 ether);
+        mockDai.mint(user, 1000 * 1e18);
+        mockDai.mint(address(this), 1000 * 1e18);
     }
 
     // -----------------------------------
@@ -39,65 +39,65 @@ contract NdiFiVaultTest is Test {
     // -----------------------------------
     function testRevert_DepositToZeroAddress() public {
         vm.startPrank(user);
-        mockDai.approve(address(vault), 100 ether);
+        mockDai.approve(address(vault), 100 * 1e18);
         vm.expectRevert("invalidAddress()");
-        vault.deposit(1 ether, address(0));
+        vault.deposit(1 * 1e18, address(0));
     }
 
     function testRevert_DepositZeroAmount() public {
         vm.startPrank(user);
-        mockDai.approve(address(vault), 100 ether);
+        mockDai.approve(address(vault), 100 * 1e18);
         vm.expectRevert("invalidDepositAmount()");
         vault.deposit(0, user);
     }
 
     function testRevert_WithdrawToZeroAddress() public {
         vm.startPrank(user);
-        mockDai.approve(address(vault), 10 ether);
-        vault.deposit(10 ether, user);
+        mockDai.approve(address(vault), 10 * 1e18);
+        vault.deposit(10 * 1e18, user);
 
         vm.expectRevert("invalidAddress()");
-        vault.withdraw(1 ether, address(0), user);
+        vault.withdraw(1 * 1e18, address(0), user);
     }
 
     function testRevert_WithdrawFromZeroAddress() public {
         //function name: withdraw from or withdraw to??
         vm.startPrank(user);
-        mockDai.approve(address(vault), 10 ether);
-        vault.deposit(10 ether, user);
+        mockDai.approve(address(vault), 10 * 1e18);
+        vault.deposit(10 * 1e18, user);
 
         vm.expectRevert("invalidAddress()");
-        vault.withdraw(1 ether, user, address(0)); // we can withdraw from address zero because address 0 can't even deposit...
+        vault.withdraw(1 * 1e18, user, address(0)); // we can withdraw from address zero because address 0 can't even deposit...
     }
 
     function testRevert_MintZeroShares() public {
         vm.startPrank(user);
-        mockDai.approve(address(vault), 10 ether);
+        mockDai.approve(address(vault), 10 * 1e18);
         vm.expectRevert("invalidDepositAmount()");
         vault.mint(0, user);
     }
 
     function testRevert_MintToZeroAddress() public {
         vm.startPrank(user);
-        mockDai.approve(address(vault), 10 ether);
+        mockDai.approve(address(vault), 10 * 1e18);
         vm.expectRevert("invalidAddress()");
-        vault.mint(1 ether, address(0));
+        vault.mint(1 * 1e18, address(0));
     }
 
     function testRevert_RedeemZeroShares() public {
         vm.startPrank(user);
-        mockDai.approve(address(vault), 10 ether);
-        vault.deposit(10 ether, user);
+        mockDai.approve(address(vault), 10 * 1e18);
+        vault.deposit(10 * 1e18, user);
         vm.expectRevert("invalidAmount()");
         vault.redeem(0, user, user);
     }
 
     function testRevert_RedeemToZeroAddress() public {
         vm.startPrank(user);
-        mockDai.approve(address(vault), 10 ether);
-        vault.deposit(10 ether, user);
+        mockDai.approve(address(vault), 10 * 1e18);
+        vault.deposit(10 * 1e18, user);
         vm.expectRevert("invalidAddress()");
-        vault.redeem(1 ether, address(0), user);
+        vault.redeem(1 * 1e18, address(0), user);
     }
 
     // ----------------------------------
@@ -120,30 +120,30 @@ contract NdiFiVaultTest is Test {
         vm.stopPrank();
 
         vm.startPrank(user);
-        mockDai.approve(address(vault), 10 ether);
+        mockDai.approve(address(vault), 10 * 1e18);
 
         vm.expectRevert("underMaintenance()");
-        vault.deposit(10 ether, user);
+        vault.deposit(10 * 1e18, user);
 
         // Deposit one so user has shares
         vm.stopPrank();
         vault.unpauseVault();
         vm.startPrank(user);
-        vault.deposit(10 ether, user);
-        vault.approve(address(vault), 10 ether);
+        vault.deposit(10 * 1e18, user);
+        vault.approve(address(vault), 10 * 1e18);
 
         vm.stopPrank();
         vault.pauseVault();
         vm.startPrank(user);
 
         vm.expectRevert("underMaintenance()");
-        vault.withdraw(1 ether, user, user);
+        vault.withdraw(1 * 1e18, user, user);
 
         vm.expectRevert("underMaintenance()");
-        vault.mint(1 ether, user);
+        vault.mint(1 * 1e18, user);
 
         vm.expectRevert("underMaintenance()");
-        vault.redeem(1 ether, user, user);
+        vault.redeem(1 * 1e18, user, user);
     }
 
     // ----------------------------------
@@ -157,12 +157,12 @@ contract NdiFiVaultTest is Test {
         vm.expectRevert();
         vault.unpauseVault();
 
-        mockDai.mint(address(vault), 1 ether);
+        mockDai.mint(address(vault), 1 * 1e18);
         vm.expectRevert();
         vault.emergencyWithdraw(attacker, attacker);
 
         vm.expectRevert();
-        vault.setStakingCap(1 ether);
+        vault.setStakingCap(1 * 1e18);
         vm.stopPrank();
     }
 
@@ -172,8 +172,8 @@ contract NdiFiVaultTest is Test {
     function testEmergencyWithdrawTransfersAllFunds() public {
         // Deposit to vault as user
         vm.startPrank(user);
-        mockDai.approve(address(vault), 100 ether);
-        vault.deposit(100 ether, user);
+        mockDai.approve(address(vault), 100 * 1e18);
+        vault.deposit(100 * 1e18, user);
         vm.stopPrank();
 
         uint256 before = mockDai.balanceOf(admin);
@@ -181,7 +181,7 @@ contract NdiFiVaultTest is Test {
         vault.emergencyWithdraw(admin, admin);
 
         assertEq(mockDai.balanceOf(address(vault)), 0);
-        assertEq(mockDai.balanceOf(admin), before + 100 ether);
+        assertEq(mockDai.balanceOf(admin), before + 100 * 1e18);
     }
 
     function testEmergencyRedeemTransfersUserShares() public {
@@ -226,14 +226,14 @@ contract NdiFiVaultTest is Test {
     // Invariant: deposit->withdraw roundtrip maintains asset parity
     // ----------------------------------
     function testRoundtripDepositWithdraw() public {
-        uint256 amount = 100 ether;
+        uint256 amount = 100 * 1e18;
         vm.startPrank(user);
         mockDai.approve(address(vault), amount);
         vault.deposit(amount, user);
 
         assertEq(vault.maxWithdraw(user), amount);
         vault.withdraw(amount, user, user);
-        assertEq(mockDai.balanceOf(user), 1000 ether, "user should get back all DAI");
+        assertEq(mockDai.balanceOf(user), 1000 * 1e18, "user should get back all DAI");
         vm.stopPrank();
     }
 
@@ -241,13 +241,13 @@ contract NdiFiVaultTest is Test {
     // Invariant: mint->redeem roundtrip maintains shares/assets
     // ----------------------------------
     function testRoundtripMintRedeem() public {
-        uint256 amount = 123 ether;
+        uint256 amount = 123 * 1e18;
         vm.startPrank(user);
         mockDai.approve(address(vault), amount);
         uint256 shares = vault.mint(amount, user);
         vault.redeem(shares, user, user);
         uint256 daiReturned = mockDai.balanceOf(user);
-        assertApproxEqAbs(daiReturned, 1000 ether, 1e6, "user should get back nearly all DAI");
+        assertApproxEqAbs(daiReturned, 1000 * 1e18, 1e6, "user should get back nearly all DAI");
         vm.stopPrank();
     }
 
@@ -257,7 +257,7 @@ contract NdiFiVaultTest is Test {
     function testRevert_DepositWithoutApprove() public {
         vm.startPrank(user);
         vm.expectRevert();
-        vault.deposit(10 ether, user);
+        vault.deposit(10 * 1e18, user);
         vm.stopPrank();
     }
 
@@ -266,9 +266,9 @@ contract NdiFiVaultTest is Test {
     // ----------------------------------
     function testRevert_DepositMoreThanAllowance() public {
         vm.startPrank(user);
-        mockDai.approve(address(vault), 5 ether);
+        mockDai.approve(address(vault), 5 * 1e18);
         vm.expectRevert();
-        vault.deposit(10 ether, user);
+        vault.deposit(10 * 1e18, user);
         vm.stopPrank();
     }
 
@@ -315,22 +315,22 @@ contract NdiFiVaultTest is Test {
     function testRevert_SetStakingCapByNonOwner() public {
         vm.startPrank(attacker);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, attacker));
-        vault.setStakingCap(1 ether);
+        vault.setStakingCap(1 * 1e18);
     }
 
     function testRevert_SetStakingCapBelowTotalAssets() public {
         vm.startPrank(user);
-        mockDai.approve(address(vault), 100 ether);
-        vault.deposit(100 ether, user);
+        mockDai.approve(address(vault), 100 * 1e18);
+        vault.deposit(100 * 1e18, user);
         vm.stopPrank();
 
         vm.startPrank(admin);
-        vault.setStakingCap(50 ether);
+        vault.setStakingCap(50 * 1e18);
         vm.stopPrank();
 
         vm.startPrank(user);
-        mockDai.approve(address(vault), 1 ether);
+        mockDai.approve(address(vault), 1 * 1e18);
         vm.expectRevert("stakingCapExceeded()");
-        vault.deposit(1 ether, user);
+        vault.deposit(1 * 1e18, user);
     }
 }
