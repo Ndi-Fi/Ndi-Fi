@@ -25,30 +25,18 @@ contract TestStakingSetup {
     NdiStaking public staking;
 
     constructor() {
-    
         stakeToken = new MockToken("StakeToken", "STK");
         rewardToken = new MockToken("RewardToken", "RWD");
 
-       
         stakeToken.mint(msg.sender, 1_000_000 ether);
         rewardToken.mint(address(this), 1_000_000 ether);
 
-       
         vault = new MockVault(stakeToken);
 
-       
         staking = new NdiStaking(
-            address(stakeToken),
-            address(rewardToken),
-            address(vault),
-            msg.sender,       
-            1000,            
-            1 ether,          
-            1000 ether,       
-            1 days            
+            address(stakeToken), address(rewardToken), address(vault), msg.sender, 1000, 1 ether, 1000 ether, 1 days
         );
 
-       
         stakeToken.approve(address(vault), type(uint256).max);
     }
 }
