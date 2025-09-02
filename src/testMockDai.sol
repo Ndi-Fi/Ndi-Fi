@@ -8,7 +8,6 @@ contract MockDAI is ERC20 {
         _mint(msg.sender, 1_000_000 * 10 ** decimals()); // 1M DAI to deployer
     }
 
-
     function faucet(address to, uint256 amount) external {
         _mint(to, amount);
     }

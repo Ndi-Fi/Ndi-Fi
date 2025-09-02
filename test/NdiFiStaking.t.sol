@@ -23,24 +23,19 @@ contract NdiFiStakingTest is Test {
 
     address public owner = makeAddr("owner");
     address public staker = makeAddr("staker");
-    
 
     function setUp() public {
-          //deployed stake token
+        //deployed stake token
         stakeToken = new MockERC20("stake Token", "ST");
         //deploy reward token
         vm.prank(owner);
         rewardToken = new MockERC20("reward Token", "RT");
-         //deploy vault
+        //deploy vault
         vm.prank(owner);
         vault = new NdiFiVault(address(stakeToken), owner);
-
-
         stake = new NdiStaking(
             address(stakeToken), address(rewardToken), address(vault), owner, 15, 10 * 1e18, 1000 * 1e18, 20 days
         );
-
-       
         //mint stake token to staker
         stakeToken.mint(staker, 100 * 1e18);
 
