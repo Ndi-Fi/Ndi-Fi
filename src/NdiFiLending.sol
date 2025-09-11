@@ -25,14 +25,14 @@ contract NdiFiLending {
     event LoanTaken(address indexed user, uint256 amount);
     event LoanRepaid(address indexed user, uint256 amount);
 
-    constructor(IERC20 _collateralToken, IERC20 _lendingToken, uint256 _collateralFactor)  {
+    constructor(IERC20 _collateralToken, IERC20 _lendingToken, uint256 _collateralFactor) {
         require(_collateralFactor <= 100, "Collateral factor must be <= 100");
         collateralToken = _collateralToken;
         lendingToken = _lendingToken;
         collateralFactor = _collateralFactor;
     }
 
-    function setCollateralFactor(uint256 _newFactor) external  {
+    function setCollateralFactor(uint256 _newFactor) external {
         require(_newFactor <= 100, "Collateral factor must be <= 100");
         collateralFactor = _newFactor;
     }
