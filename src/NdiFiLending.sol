@@ -20,19 +20,19 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
 
     IERC20 public immutable collateralToken;
     IERC20 public immutable lendingToken;
-    
+
     uint256 public collateralFactor; // Percentage (e.g., 75 = 75%)
     uint256 public liquidationThreshold; // Threshold for liquidation (e.g., 85%)
     uint256 public annualInterestRate; // Annual interest rate in basis points
     uint256 public liquidationPenalty; // Liquidation penalty in basis points
-    
+
     uint256 public constant SECONDS_PER_YEAR = 365 * 24 * 60 * 60;
     uint256 public constant BASIS_POINTS = 10000;
-    
+
     mapping(address => uint256) public collateralBalances;
     mapping(address => Loan) public loans;
     // mapping(address => bool) public liquidators;
-    
+
     uint256 public totalCollateral;
     uint256 public totalBorrowed;
 
@@ -43,13 +43,17 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
     event CollateralWithdrawn(address indexed user, uint256 amount);
     event LoanTaken(address indexed user, uint256 principal, uint256 collateralLocked);
     event LoanRepaid(address indexed user, uint256 amount, uint256 interest);
-    event LoanLiquidated(address indexed borrower, address indexed liquidator, uint256 collateralSeized, uint256 debtRepaid);
+    event LoanLiquidated(
+        address indexed borrower, address indexed liquidator, uint256 collateralSeized, uint256 debtRepaid
+    );
     event InterestRateUpdated(uint256 oldRate, uint256 newRate);
     event LiquidatorStatusChanged(address indexed liquidator, bool status);
-    event ContractInitialized(uint256 collateralFactor, uint256 liquidationThreshold, uint256 interestRate, uint256 penalty);
+    event ContractInitialized(
+        uint256 collateralFactor, uint256 liquidationThreshold, uint256 interestRate, uint256 penalty
+    );
 
     modifier onlyLiquidator() {
-        require( msg.sender == owner(), "Not authorized liquidator");
+        require(msg.sender == owner(), "Not authorized liquidator");
         _;
     }
 
@@ -58,14 +62,11 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         _;
     }
 
-    constructor(
-        IERC20 _collateralToken,
-        IERC20 _lendingToken
-    ) Ownable(msg.sender) {
+    constructor(IERC20 _collateralToken, IERC20 _lendingToken) Ownable(msg.sender) {
         require(address(_collateralToken) != address(0), "Invalid collateral token");
         require(address(_lendingToken) != address(0), "Invalid lending token");
         require(_collateralToken != _lendingToken, "Tokens must be different");
-        
+
         collateralToken = _collateralToken;
         lendingToken = _lendingToken;
     }
@@ -78,17 +79,19 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
     ) external onlyOwner {
         require(!initialized, "Already initialized");
         require(_collateralFactor <= 100 && _collateralFactor > 0, "Invalid collateral factor");
-        require(_liquidationThreshold <= 100 && _liquidationThreshold > _collateralFactor, "Invalid liquidation threshold");
+        require(
+            _liquidationThreshold <= 100 && _liquidationThreshold > _collateralFactor, "Invalid liquidation threshold"
+        );
         require(_annualInterestRate <= 5000, "Interest rate too high"); // Max 50%
         require(_liquidationPenalty <= 2000, "Liquidation penalty too high"); // Max 20%
-        
+
         collateralFactor = _collateralFactor;
         liquidationThreshold = _liquidationThreshold;
         annualInterestRate = _annualInterestRate;
         liquidationPenalty = _liquidationPenalty;
-        
+
         initialized = true;
-        
+
         emit ContractInitialized(_collateralFactor, _liquidationThreshold, _annualInterestRate, _liquidationPenalty);
     }
 
@@ -115,10 +118,10 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         liquidationPenalty = _newPenalty;
     }
 
-    function setLiquidatorStatus(address _liquidator, bool _status) external onlyOwner onlyInitialized {
-        liquidators[_liquidator] = _status;
-        emit LiquidatorStatusChanged(_liquidator, _status);
-    }
+    // function setLiquidatorStatus(address _liquidator, bool _status) external onlyOwner onlyInitialized {
+    //     liquidators[_liquidator] = _status;
+    //     emit LiquidatorStatusChanged(_liquidator, _status);
+    // }
 
     function pause() external onlyOwner {
         _pause();
@@ -130,32 +133,32 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
 
     function depositCollateral(uint256 _amount) external whenNotPaused nonReentrant onlyInitialized {
         require(_amount > 0, "Amount must be greater than zero");
-        
+
         require(collateralToken.transferFrom(msg.sender, address(this), _amount), "Transfer failed");
-        
+
         collateralBalances[msg.sender] += _amount;
         totalCollateral += _amount;
-        
+
         emit CollateralDeposited(msg.sender, _amount);
     }
 
     function withdrawCollateral(uint256 _amount) external whenNotPaused nonReentrant onlyInitialized {
         require(_amount > 0, "Amount must be greater than zero");
         require(collateralBalances[msg.sender] >= _amount, "Insufficient collateral");
-        
+
         if (loans[msg.sender].isActive) {
             _updateLoanInterest(msg.sender);
         }
-        
+
         uint256 lockedCollateral = _getLockedCollateral(msg.sender);
         uint256 availableCollateral = collateralBalances[msg.sender] - lockedCollateral;
         require(_amount <= availableCollateral, "Cannot withdraw collateral locked for loan");
-        
+
         collateralBalances[msg.sender] -= _amount;
         totalCollateral -= _amount;
-        
+
         require(collateralToken.transfer(msg.sender, _amount), "Transfer failed");
-        
+
         emit CollateralWithdrawn(msg.sender, _amount);
     }
 
@@ -164,12 +167,12 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         require(_amount > 0, "Amount must be greater than zero");
         require(!loans[msg.sender].isActive, "Existing loan must be repaid first");
         require(lendingToken.balanceOf(address(this)) >= _amount, "Insufficient liquidity");
-        
+
         uint256 maxLoanAmount = (collateralBalances[msg.sender] * collateralFactor) / 100;
         require(_amount <= maxLoanAmount, "Loan exceeds collateral limit");
-        
+
         uint256 requiredCollateral = (_amount * 100) / collateralFactor;
-        
+
         loans[msg.sender] = Loan({
             principal: _amount,
             interestAccrued: 0,
@@ -178,31 +181,30 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
             lastUpdateTime: block.timestamp,
             isActive: true
         });
-        
+
         totalBorrowed += _amount;
-        
+
         require(lendingToken.transfer(msg.sender, _amount), "Transfer failed");
-        
+
         emit LoanTaken(msg.sender, _amount, requiredCollateral);
     }
 
+    //note: reloook this again
     function repayLoan(uint256 _amount) external whenNotPaused nonReentrant onlyInitialized {
-
-         Loan storage userLoan = loans[msg.sender];
+        Loan storage userLoan = loans[msg.sender];
         require(userLoan.isActive, "No active loan");
         require(_amount > 0, "Amount must be greater than zero");
-       
-        
+
         _updateLoanInterest(msg.sender);
-        
+
         uint256 totalDebt = userLoan.principal + userLoan.interestAccrued;
         require(_amount == totalDebt, "invalid repay amount");
-        
+
         require(lendingToken.transferFrom(msg.sender, address(this), _amount), "Transfer failed");
-        
+
         uint256 interestPaid = 0;
         uint256 principalPaid = 0;
-        
+
         if (userLoan.interestAccrued >= _amount) {
             interestPaid = _amount;
             userLoan.interestAccrued -= _amount;
@@ -212,57 +214,58 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
             userLoan.interestAccrued = 0;
             userLoan.principal -= principalPaid;
         }
-        
+
         if (userLoan.principal == 0) {
             userLoan.isActive = false;
             totalBorrowed -= (userLoan.principal + principalPaid);
         } else {
             totalBorrowed -= principalPaid;
         }
-        
+
         emit LoanRepaid(msg.sender, _amount, interestPaid);
     }
 
     function liquidateLoan(address _borrower) external onlyLiquidator nonReentrant onlyInitialized {
         Loan storage loan = loans[_borrower];
         require(loan.isActive, "No active loan");
-        
+
         _updateLoanInterest(_borrower);
-        
+
         uint256 healthFactor = calculateHealthFactor(_borrower);
         require(healthFactor < 100, "Loan is not liquidatable");
-        
+
         uint256 totalDebt = loan.principal + loan.interestAccrued;
         uint256 collateralValue = loan.collateralAmount;
         uint256 penalty = (collateralValue * liquidationPenalty) / BASIS_POINTS;
         uint256 collateralToSeize = collateralValue + penalty;
-        
+
         if (collateralToSeize > collateralBalances[_borrower]) {
             collateralToSeize = collateralBalances[_borrower];
         }
-        
+
         require(lendingToken.transferFrom(msg.sender, address(this), totalDebt), "Debt repayment failed");
-        
+
         collateralBalances[_borrower] -= collateralToSeize;
         totalCollateral -= collateralToSeize;
         totalBorrowed -= loan.principal;
-        
+
         loan.isActive = false;
         loan.principal = 0;
         loan.interestAccrued = 0;
-        
+
         require(collateralToken.transfer(msg.sender, collateralToSeize), "Collateral transfer failed");
-        
+
         emit LoanLiquidated(_borrower, msg.sender, collateralToSeize, totalDebt);
     }
+    ///note: look in to this
 
     function _updateLoanInterest(address _borrower) internal {
         Loan storage loan = loans[_borrower];
         if (!loan.isActive) return;
-        
+
         uint256 timeElapsed = block.timestamp - loan.lastUpdateTime;
         if (timeElapsed == 0) return;
-        
+
         uint256 interest = (loan.principal * annualInterestRate * timeElapsed) / (BASIS_POINTS * SECONDS_PER_YEAR);
         loan.interestAccrued += interest;
         loan.lastUpdateTime = block.timestamp;
@@ -276,43 +279,48 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
 
     function calculateHealthFactor(address _borrower) public view returns (uint256) {
         if (!initialized) return type(uint256).max;
-        
+
         Loan memory loan = loans[_borrower];
         if (!loan.isActive) return type(uint256).max;
-        
+
         uint256 totalDebt = loan.principal + loan.interestAccrued;
         if (totalDebt == 0) return type(uint256).max;
-        
+
         uint256 collateralValue = loan.collateralAmount;
         uint256 liquidationValue = (collateralValue * liquidationThreshold) / 100;
-        
+
         return (liquidationValue * 100) / totalDebt;
     }
 
-    function getLoanDetails(address _user) external view returns (
-        uint256 principal,
-        uint256 interestAccrued,
-        uint256 totalDebt,
-        uint256 collateralAmount,
-        uint256 healthFactor,
-        bool isActive
-    ) {
+    function getLoanDetails(address _user)
+        external
+        view
+        returns (
+            uint256 principal,
+            uint256 interestAccrued,
+            uint256 totalDebt,
+            uint256 collateralAmount,
+            uint256 healthFactor,
+            bool isActive
+        )
+    {
         if (!initialized) {
             return (0, 0, 0, 0, type(uint256).max, false);
         }
-        
+
         Loan memory userLoan = loans[_user];
-        
+
         uint256 currentInterest = userLoan.interestAccrued;
         if (userLoan.isActive) {
             uint256 timeElapsed = block.timestamp - userLoan.lastUpdateTime;
-            uint256 newInterest = (userLoan.principal * annualInterestRate * timeElapsed) / (BASIS_POINTS * SECONDS_PER_YEAR);
+            uint256 newInterest =
+                (userLoan.principal * annualInterestRate * timeElapsed) / (BASIS_POINTS * SECONDS_PER_YEAR);
             currentInterest += newInterest;
         }
-        
+
         uint256 totalDebtAmount = userLoan.principal + currentInterest;
         uint256 healthFactorValue = userLoan.isActive ? calculateHealthFactor(_user) : type(uint256).max;
-        
+
         return (
             userLoan.principal,
             currentInterest,
@@ -323,15 +331,19 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         );
     }
 
-    function getContractStats() external view returns (
-        uint256 totalCollateralAmount,
-        uint256 totalBorrowedAmount,
-        uint256 availableLiquidity,
-        uint256 utilizationRate
-    ) {
+    function getContractStats()
+        external
+        view
+        returns (
+            uint256 totalCollateralAmount,
+            uint256 totalBorrowedAmount,
+            uint256 availableLiquidity,
+            uint256 utilizationRate
+        )
+    {
         uint256 liquidity = lendingToken.balanceOf(address(this));
         uint256 utilization = totalBorrowed == 0 ? 0 : (totalBorrowed * 100) / (totalBorrowed + liquidity);
-        
+
         return (totalCollateral, totalBorrowed, liquidity, utilization);
     }
 
