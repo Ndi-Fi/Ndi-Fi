@@ -36,7 +36,7 @@ contract NdiPointTest is Test {
         vm.stopPrank();
     }
 
-    function testInitialState() view  public {
+    function testInitialState() public view {
         assertEq(ndiPoint.name(), "Ndi-Point");
         assertEq(ndiPoint.symbol(), "NDI");
         assertEq(ndiPoint.decimals(), 18);
@@ -179,7 +179,7 @@ contract NdiPointTest is Test {
         assertEq(ndiPoint.remainingSupply(), expectedRemaining - mintAmount);
     }
 
-    function testPermitFunctionality() view  public {
+    function testPermitFunctionality() public view {
         uint256 permitAmount = 1000 * 10 ** 18;
         uint256 deadline = block.timestamp + 1 hours;
 
