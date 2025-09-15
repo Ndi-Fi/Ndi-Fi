@@ -11,19 +11,19 @@ import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.so
 contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
     struct Loan {
         uint256 principal; // Original borrowed amount
-        uint256 interestAccrued; // Accrued interest
+        uint256 originationFee; // One-time origination fee
         uint256 collateralAmount; // Actual collateral locked for this loan
         uint256 startTime; // Loan start timestamp
-        uint256 lastUpdateTime; // Last interest calculation timestamp
         bool isActive; // Loan status
     }
 
     IERC20 public immutable collateralToken;
     IERC20 public immutable lendingToken;
+    NdiFiVault public immutable vault;
 
     uint256 public collateralFactor; // Percentage (e.g., 75 = 75%)
     uint256 public liquidationThreshold; // Threshold for liquidation (e.g., 85%)
-    uint256 public annualInterestRate; // Annual interest rate in basis points
+    uint256 public originationFeeRate; // One-time origination fee rate in basis points (charged at loan origination)
     uint256 public liquidationPenalty; // Liquidation penalty in basis points
 
     uint256 public constant SECONDS_PER_YEAR = 365 * 24 * 60 * 60;
@@ -42,14 +42,12 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
     event CollateralDeposited(address indexed user, uint256 amount);
     event CollateralWithdrawn(address indexed user, uint256 amount);
     event LoanTaken(address indexed user, uint256 principal, uint256 collateralLocked);
-    event LoanRepaid(address indexed user, uint256 amount, uint256 interest);
-    event LoanLiquidated(
-        address indexed borrower, address indexed liquidator, uint256 collateralSeized, uint256 debtRepaid
-    );
-    event InterestRateUpdated(uint256 oldRate, uint256 newRate);
+    event LoanRepaid(address indexed user, uint256 amount, uint256 originationFee);
+    event LoanLiquidated(address indexed borrower, address indexed liquidator, uint256 collateralSeized, uint256 debtRepaid);
+    event OriginationFeeRateUpdated(uint256 oldRate, uint256 newRate);
     event LiquidatorStatusChanged(address indexed liquidator, bool status);
     event ContractInitialized(
-        uint256 collateralFactor, uint256 liquidationThreshold, uint256 interestRate, uint256 penalty
+        uint256 collateralFactor, uint256 liquidationThreshold, uint256 originationFeeRate, uint256 penalty
     );
 
     modifier onlyLiquidator() {
@@ -62,19 +60,21 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         _;
     }
 
-    constructor(IERC20 _collateralToken, IERC20 _lendingToken) Ownable(msg.sender) {
+    constructor(IERC20 _collateralToken, IERC20 _lendingToken, NdiFiVault _vault) Ownable(msg.sender) {
         require(address(_collateralToken) != address(0), "Invalid collateral token");
         require(address(_lendingToken) != address(0), "Invalid lending token");
+        require(address(_vault) != address(0), "Invalid vault address");
         require(_collateralToken != _lendingToken, "Tokens must be different");
 
         collateralToken = _collateralToken;
         lendingToken = _lendingToken;
+        vault = _vault;
     }
 
     function initialize(
         uint256 _collateralFactor,
         uint256 _liquidationThreshold,
-        uint256 _annualInterestRate,
+        uint256 _originationFeeRate,
         uint256 _liquidationPenalty
     ) external onlyOwner {
         require(!initialized, "Already initialized");
@@ -82,17 +82,17 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         require(
             _liquidationThreshold <= 100 && _liquidationThreshold > _collateralFactor, "Invalid liquidation threshold"
         );
-        require(_annualInterestRate <= 5000, "Interest rate too high"); // Max 50%
+        require(_originationFeeRate <= 1000, "Origination fee too high"); // Max 10%
         require(_liquidationPenalty <= 2000, "Liquidation penalty too high"); // Max 20%
-
+        
         collateralFactor = _collateralFactor;
         liquidationThreshold = _liquidationThreshold;
-        annualInterestRate = _annualInterestRate;
+        originationFeeRate = _originationFeeRate;
         liquidationPenalty = _liquidationPenalty;
 
         initialized = true;
 
-        emit ContractInitialized(_collateralFactor, _liquidationThreshold, _annualInterestRate, _liquidationPenalty);
+        emit ContractInitialized(_collateralFactor, _liquidationThreshold, _originationFeeRate, _liquidationPenalty);
     }
 
     function setCollateralFactor(uint256 _newFactor) external onlyOwner onlyInitialized {
@@ -106,11 +106,11 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         liquidationThreshold = _newThreshold;
     }
 
-    function setAnnualInterestRate(uint256 _newRate) external onlyOwner onlyInitialized {
-        require(_newRate <= 5000, "Interest rate too high");
-        uint256 oldRate = annualInterestRate;
-        annualInterestRate = _newRate;
-        emit InterestRateUpdated(oldRate, _newRate);
+    function setOriginationFeeRate(uint256 _newRate) external onlyOwner onlyInitialized {
+        require(_newRate <= 1000, "Origination fee too high");
+        uint256 oldRate = originationFeeRate;
+        originationFeeRate = _newRate;
+        emit OriginationFeeRateUpdated(oldRate, _newRate);
     }
 
     function setLiquidationPenalty(uint256 _newPenalty) external onlyOwner onlyInitialized {
@@ -146,9 +146,6 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         require(_amount > 0, "Amount must be greater than zero");
         require(collateralBalances[msg.sender] >= _amount, "Insufficient collateral");
 
-        if (loans[msg.sender].isActive) {
-            _updateLoanInterest(msg.sender);
-        }
 
         uint256 lockedCollateral = _getLockedCollateral(msg.sender);
         uint256 availableCollateral = collateralBalances[msg.sender] - lockedCollateral;
@@ -166,75 +163,64 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         require(collateralBalances[msg.sender] > 0, "No collateral deposited");
         require(_amount > 0, "Amount must be greater than zero");
         require(!loans[msg.sender].isActive, "Existing loan must be repaid first");
-        require(lendingToken.balanceOf(address(this)) >= _amount, "Insufficient liquidity");
-
+        
+        // Calculate one-time origination fee
+        uint256 originationFee = (_amount * originationFeeRate) / BASIS_POINTS;
+        uint256 netLoanAmount = _amount - originationFee;
+        
+        // Check vault has sufficient liquidity
+        require(vault.getAvailableLiquidity() >= netLoanAmount, "Insufficient vault liquidity");
+        
         uint256 maxLoanAmount = (collateralBalances[msg.sender] * collateralFactor) / 100;
         require(_amount <= maxLoanAmount, "Loan exceeds collateral limit");
-
+        
         uint256 requiredCollateral = (_amount * 100) / collateralFactor;
-
+        
         loans[msg.sender] = Loan({
             principal: _amount,
-            interestAccrued: 0,
+            originationFee: originationFee,
             collateralAmount: requiredCollateral,
             startTime: block.timestamp,
-            lastUpdateTime: block.timestamp,
             isActive: true
         });
-
+        
         totalBorrowed += _amount;
-
-        require(lendingToken.transfer(msg.sender, _amount), "Transfer failed");
-
+        
+        // Get lending tokens from vault and send net amount to borrower
+        vault.withdrawForLoan(msg.sender, netLoanAmount);
+        
         emit LoanTaken(msg.sender, _amount, requiredCollateral);
     }
 
-    //note: reloook this again
     function repayLoan(uint256 _amount) external whenNotPaused nonReentrant onlyInitialized {
         Loan storage userLoan = loans[msg.sender];
         require(userLoan.isActive, "No active loan");
         require(_amount > 0, "Amount must be greater than zero");
 
-        _updateLoanInterest(msg.sender);
-
-        uint256 totalDebt = userLoan.principal + userLoan.interestAccrued;
-        require(_amount == totalDebt, "invalid repay amount");
+        uint256 totalDebt = userLoan.principal + userLoan.originationFee;
+        require(_amount == totalDebt, "Must repay full debt amount");
 
         require(lendingToken.transferFrom(msg.sender, address(this), _amount), "Transfer failed");
 
-        uint256 interestPaid = 0;
-        uint256 principalPaid = 0;
+        // Clear the loan
+        userLoan.isActive = false;
+        totalBorrowed -= userLoan.principal;
 
-        if (userLoan.interestAccrued >= _amount) {
-            interestPaid = _amount;
-            userLoan.interestAccrued -= _amount;
-        } else {
-            interestPaid = userLoan.interestAccrued;
-            principalPaid = _amount - interestPaid;
-            userLoan.interestAccrued = 0;
-            userLoan.principal -= principalPaid;
-        }
+        emit LoanRepaid(msg.sender, _amount, userLoan.originationFee);
 
-        if (userLoan.principal == 0) {
-            userLoan.isActive = false;
-            totalBorrowed -= (userLoan.principal + principalPaid);
-        } else {
-            totalBorrowed -= principalPaid;
-        }
-
-        emit LoanRepaid(msg.sender, _amount, interestPaid);
+        // Reset loan data
+        userLoan.principal = 0;
+        userLoan.originationFee = 0;
     }
 
     function liquidateLoan(address _borrower) external onlyLiquidator nonReentrant onlyInitialized {
         Loan storage loan = loans[_borrower];
         require(loan.isActive, "No active loan");
 
-        _updateLoanInterest(_borrower);
-
         uint256 healthFactor = calculateHealthFactor(_borrower);
         require(healthFactor < 100, "Loan is not liquidatable");
 
-        uint256 totalDebt = loan.principal + loan.interestAccrued;
+        uint256 totalDebt = loan.principal + loan.originationFee;
         uint256 collateralValue = loan.collateralAmount;
         uint256 penalty = (collateralValue * liquidationPenalty) / BASIS_POINTS;
         uint256 collateralToSeize = collateralValue + penalty;
@@ -251,24 +237,11 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
 
         loan.isActive = false;
         loan.principal = 0;
-        loan.interestAccrued = 0;
+        loan.originationFee = 0;
 
         require(collateralToken.transfer(msg.sender, collateralToSeize), "Collateral transfer failed");
 
         emit LoanLiquidated(_borrower, msg.sender, collateralToSeize, totalDebt);
-    }
-    ///note: look in to this
-
-    function _updateLoanInterest(address _borrower) internal {
-        Loan storage loan = loans[_borrower];
-        if (!loan.isActive) return;
-
-        uint256 timeElapsed = block.timestamp - loan.lastUpdateTime;
-        if (timeElapsed == 0) return;
-
-        uint256 interest = (loan.principal * annualInterestRate * timeElapsed) / (BASIS_POINTS * SECONDS_PER_YEAR);
-        loan.interestAccrued += interest;
-        loan.lastUpdateTime = block.timestamp;
     }
 
     function _getLockedCollateral(address _user) internal view returns (uint256) {
@@ -283,7 +256,7 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         Loan memory loan = loans[_borrower];
         if (!loan.isActive) return type(uint256).max;
 
-        uint256 totalDebt = loan.principal + loan.interestAccrued;
+        uint256 totalDebt = loan.principal + loan.originationFee;
         if (totalDebt == 0) return type(uint256).max;
 
         uint256 collateralValue = loan.collateralAmount;
@@ -297,7 +270,7 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         view
         returns (
             uint256 principal,
-            uint256 interestAccrued,
+            uint256 originationFee,
             uint256 totalDebt,
             uint256 collateralAmount,
             uint256 healthFactor,
@@ -309,21 +282,12 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         }
 
         Loan memory userLoan = loans[_user];
-
-        uint256 currentInterest = userLoan.interestAccrued;
-        if (userLoan.isActive) {
-            uint256 timeElapsed = block.timestamp - userLoan.lastUpdateTime;
-            uint256 newInterest =
-                (userLoan.principal * annualInterestRate * timeElapsed) / (BASIS_POINTS * SECONDS_PER_YEAR);
-            currentInterest += newInterest;
-        }
-
-        uint256 totalDebtAmount = userLoan.principal + currentInterest;
+        uint256 totalDebtAmount = userLoan.principal + userLoan.originationFee;
         uint256 healthFactorValue = userLoan.isActive ? calculateHealthFactor(_user) : type(uint256).max;
 
         return (
             userLoan.principal,
-            currentInterest,
+            userLoan.originationFee,
             totalDebtAmount,
             userLoan.collateralAmount,
             healthFactorValue,
@@ -341,9 +305,9 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
             uint256 utilizationRate
         )
     {
-        uint256 liquidity = lendingToken.balanceOf(address(this));
+        uint256 liquidity = vault.getAvailableLiquidity();
         uint256 utilization = totalBorrowed == 0 ? 0 : (totalBorrowed * 100) / (totalBorrowed + liquidity);
-
+        
         return (totalCollateral, totalBorrowed, liquidity, utilization);
     }
 
@@ -355,3 +319,6 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         require(_token.transfer(owner(), _amount), "Emergency withdrawal failed");
     }
 }
+
+
+
