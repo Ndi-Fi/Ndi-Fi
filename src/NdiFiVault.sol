@@ -145,10 +145,10 @@ contract NdiFiVault is ERC4626, Ownable {
     function withdrawForLoan(address _to, uint256 _amount) external onlyAuthorizedLending notUnderMaintenance {
         if (_to == address(0)) revert invalidAddress();
         if (_amount <= 0) revert invalidAmount();
-        
+
         uint256 availableAssets = IERC20(asset()).balanceOf(address(this));
         if (_amount > availableAssets) revert invalidAmount();
-        
+
         IERC20(asset()).safeTransfer(_to, _amount);
         emit LendingTokensWithdrawn(_to, _amount);
     }

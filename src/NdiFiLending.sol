@@ -43,7 +43,9 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
     event CollateralWithdrawn(address indexed user, uint256 amount);
     event LoanTaken(address indexed user, uint256 principal, uint256 collateralLocked);
     event LoanRepaid(address indexed user, uint256 amount, uint256 originationFee);
-    event LoanLiquidated(address indexed borrower, address indexed liquidator, uint256 collateralSeized, uint256 debtRepaid);
+    event LoanLiquidated(
+        address indexed borrower, address indexed liquidator, uint256 collateralSeized, uint256 debtRepaid
+    );
     event OriginationFeeRateUpdated(uint256 oldRate, uint256 newRate);
     event LiquidatorStatusChanged(address indexed liquidator, bool status);
     event ContractInitialized(
@@ -84,7 +86,7 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         );
         require(_originationFeeRate <= 1000, "Origination fee too high"); // Max 10%
         require(_liquidationPenalty <= 2000, "Liquidation penalty too high"); // Max 20%
-        
+
         collateralFactor = _collateralFactor;
         liquidationThreshold = _liquidationThreshold;
         originationFeeRate = _originationFeeRate;
@@ -146,7 +148,6 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         require(_amount > 0, "Amount must be greater than zero");
         require(collateralBalances[msg.sender] >= _amount, "Insufficient collateral");
 
-
         uint256 lockedCollateral = _getLockedCollateral(msg.sender);
         uint256 availableCollateral = collateralBalances[msg.sender] - lockedCollateral;
         require(_amount <= availableCollateral, "Cannot withdraw collateral locked for loan");
@@ -163,19 +164,19 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         require(collateralBalances[msg.sender] > 0, "No collateral deposited");
         require(_amount > 0, "Amount must be greater than zero");
         require(!loans[msg.sender].isActive, "Existing loan must be repaid first");
-        
+
         // Calculate one-time origination fee
         uint256 originationFee = (_amount * originationFeeRate) / BASIS_POINTS;
         uint256 netLoanAmount = _amount - originationFee;
-        
+
         // Check vault has sufficient liquidity
         require(vault.getAvailableLiquidity() >= netLoanAmount, "Insufficient vault liquidity");
-        
+
         uint256 maxLoanAmount = (collateralBalances[msg.sender] * collateralFactor) / 100;
         require(_amount <= maxLoanAmount, "Loan exceeds collateral limit");
-        
+
         uint256 requiredCollateral = (_amount * 100) / collateralFactor;
-        
+
         loans[msg.sender] = Loan({
             principal: _amount,
             originationFee: originationFee,
@@ -183,12 +184,12 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
             startTime: block.timestamp,
             isActive: true
         });
-        
+
         totalBorrowed += _amount;
-        
+
         // Get lending tokens from vault and send net amount to borrower
         vault.withdrawForLoan(msg.sender, netLoanAmount);
-        
+
         emit LoanTaken(msg.sender, _amount, requiredCollateral);
     }
 
@@ -307,7 +308,7 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
     {
         uint256 liquidity = vault.getAvailableLiquidity();
         uint256 utilization = totalBorrowed == 0 ? 0 : (totalBorrowed * 100) / (totalBorrowed + liquidity);
-        
+
         return (totalCollateral, totalBorrowed, liquidity, utilization);
     }
 
@@ -319,6 +320,3 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         require(_token.transfer(owner(), _amount), "Emergency withdrawal failed");
     }
 }
-
-
-
