@@ -7,6 +7,8 @@ import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/utils/Reentr
 import {Pausable} from "lib/openzeppelin-contracts/contracts/utils/Pausable.sol";
 import {NdiFiVault} from "./NdiFiVault.sol";
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {AggregatorV3Interface} from "lib/chainlink-brownie-contracts/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
+
 
 contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
     struct Loan {
@@ -17,9 +19,17 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         bool isActive; // Loan status
     }
 
-    IERC20 public immutable collateralToken;
+    struct CollateralToken {
+        address tokenAddress;
+        AggregatorV3Interface priceFeed;
+    }
+
+    mapping(address => CollateralToken) public supportedCollateralTokens;
+    address[] public supportedCollateralTokenAddresses;
+
     IERC20 public immutable lendingToken;
     NdiFiVault public immutable vault;
+    AggregatorV3Interface internal lendingTokenPriceFeed;
 
     uint256 public collateralFactor; // Percentage (e.g., 75 = 75%)
     uint256 public liquidationThreshold; // Threshold for liquidation (e.g., 85%)
@@ -29,9 +39,10 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
     uint256 public constant SECONDS_PER_YEAR = 365 * 24 * 60 * 60;
     uint256 public constant BASIS_POINTS = 10000;
 
-    mapping(address => uint256) public collateralBalances;
+    mapping(address => mapping(address => uint256)) public collateralBalances;
+    mapping(address => mapping(address => uint256)) public lockedCollateral;
     mapping(address => Loan) public loans;
-    // mapping(address => bool) public liquidators;
+    
 
     uint256 public totalCollateral;
     uint256 public totalBorrowed;
@@ -62,15 +73,36 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         _;
     }
 
-    constructor(IERC20 _collateralToken, IERC20 _lendingToken, NdiFiVault _vault) Ownable(msg.sender) {
-        require(address(_collateralToken) != address(0), "Invalid collateral token");
+    constructor(IERC20 _lendingToken, NdiFiVault _vault, AggregatorV3Interface _lendingTokenPriceFeed) Ownable(msg.sender) {
         require(address(_lendingToken) != address(0), "Invalid lending token");
         require(address(_vault) != address(0), "Invalid vault address");
-        require(_collateralToken != _lendingToken, "Tokens must be different");
 
-        collateralToken = _collateralToken;
         lendingToken = _lendingToken;
         vault = _vault;
+        lendingTokenPriceFeed = _lendingTokenPriceFeed;
+    }
+
+    function addCollateralToken(address _tokenAddress, address _priceFeedAddress) external onlyOwner {
+        require(_tokenAddress != address(0), "Invalid token address");
+        require(_priceFeedAddress != address(0), "Invalid price feed address");
+        require(supportedCollateralTokens[_tokenAddress].tokenAddress == address(0), "Token already supported");
+
+        supportedCollateralTokens[_tokenAddress] = CollateralToken({tokenAddress: _tokenAddress, priceFeed: AggregatorV3Interface(_priceFeedAddress)});
+        supportedCollateralTokenAddresses.push(_tokenAddress);
+    }
+
+    function removeCollateralToken(address _tokenAddress) external onlyOwner {
+        require(supportedCollateralTokens[_tokenAddress].tokenAddress != address(0), "Token not supported");
+
+        delete supportedCollateralTokens[_tokenAddress];
+
+        for (uint i = 0; i < supportedCollateralTokenAddresses.length; i++) {
+            if (supportedCollateralTokenAddresses[i] == _tokenAddress) {
+                supportedCollateralTokenAddresses[i] = supportedCollateralTokenAddresses[supportedCollateralTokenAddresses.length - 1];
+                supportedCollateralTokenAddresses.pop();
+                break;
+            }
+        }
     }
 
     function initialize(
@@ -120,10 +152,6 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         liquidationPenalty = _newPenalty;
     }
 
-    // function setLiquidatorStatus(address _liquidator, bool _status) external onlyOwner onlyInitialized {
-    //     liquidators[_liquidator] = _status;
-    //     emit LiquidatorStatusChanged(_liquidator, _status);
-    // }
 
     function pause() external onlyOwner {
         _pause();
@@ -133,35 +161,50 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         _unpause();
     }
 
-    function depositCollateral(uint256 _amount) external whenNotPaused nonReentrant onlyInitialized {
+    function depositCollateral(address _tokenAddress, uint256 _amount) external whenNotPaused nonReentrant onlyInitialized {
         require(_amount > 0, "Amount must be greater than zero");
+        require(supportedCollateralTokens[_tokenAddress].tokenAddress != address(0), "Token not supported");
 
-        require(collateralToken.transferFrom(msg.sender, address(this), _amount), "Transfer failed");
+        require(IERC20(_tokenAddress).transferFrom(msg.sender, address(this), _amount), "Transfer failed");
 
-        collateralBalances[msg.sender] += _amount;
+        collateralBalances[msg.sender][_tokenAddress] += _amount;
         totalCollateral += _amount;
 
         emit CollateralDeposited(msg.sender, _amount);
     }
 
-    function withdrawCollateral(uint256 _amount) external whenNotPaused nonReentrant onlyInitialized {
+    function withdrawCollateral(address _tokenAddress, uint256 _amount) external whenNotPaused nonReentrant onlyInitialized {
         require(_amount > 0, "Amount must be greater than zero");
-        require(collateralBalances[msg.sender] >= _amount, "Insufficient collateral");
+        require(collateralBalances[msg.sender][_tokenAddress] >= _amount, "Insufficient collateral");
 
         uint256 lockedCollateral = _getLockedCollateral(msg.sender);
-        uint256 availableCollateral = collateralBalances[msg.sender] - lockedCollateral;
+        uint256 availableCollateral = collateralBalances[msg.sender][_tokenAddress] - lockedCollateral;
         require(_amount <= availableCollateral, "Cannot withdraw collateral locked for loan");
 
-        collateralBalances[msg.sender] -= _amount;
+        collateralBalances[msg.sender][_tokenAddress] -= _amount;
         totalCollateral -= _amount;
 
-        require(collateralToken.transfer(msg.sender, _amount), "Transfer failed");
+        require(IERC20(_tokenAddress).transfer(msg.sender, _amount), "Transfer failed");
 
         emit CollateralWithdrawn(msg.sender, _amount);
     }
 
+    function getCollateralValue(address _user) public view returns (uint256) {
+        uint256 totalCollateralValue = 0;
+        for (uint i = 0; i < supportedCollateralTokenAddresses.length; i++) {
+            address tokenAddress = supportedCollateralTokenAddresses[i];
+            uint256 collateralAmount = collateralBalances[_user][tokenAddress];
+            if (collateralAmount > 0) {
+                uint256 tokenPrice = _getLatestPrice(supportedCollateralTokens[tokenAddress].priceFeed);
+                uint256 collateralDecimals = ERC20(tokenAddress).decimals();
+                totalCollateralValue += (collateralAmount * tokenPrice) / (10**collateralDecimals);
+            }
+        }
+        return totalCollateralValue;
+    }
+
     function takeLoan(uint256 _amount) external whenNotPaused nonReentrant onlyInitialized {
-        require(collateralBalances[msg.sender] > 0, "No collateral deposited");
+        require(getCollateralValue(msg.sender) > 0, "No collateral deposited");
         require(_amount > 0, "Amount must be greater than zero");
         require(!loans[msg.sender].isActive, "Existing loan must be repaid first");
 
@@ -172,15 +215,53 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         // Check vault has sufficient liquidity
         require(vault.getAvailableLiquidity() >= netLoanAmount, "Insufficient vault liquidity");
 
-        uint256 maxLoanAmount = (collateralBalances[msg.sender] * collateralFactor) / 100;
-        require(_amount <= maxLoanAmount, "Loan exceeds collateral limit");
+        uint256 collateralValue = getCollateralValue(msg.sender);
+        uint256 maxLoanValue = (collateralValue * collateralFactor) / 100;
 
-        uint256 requiredCollateral = (_amount * 100) / collateralFactor;
+        uint256 lendingTokenPrice = _getLatestPrice(lendingTokenPriceFeed);
+        uint256 lendingDecimals = ERC20(address(lendingToken)).decimals();
+        uint256 requestedLoanValue = (_amount * lendingTokenPrice) / (10**lendingDecimals);
+
+        require(requestedLoanValue <= maxLoanValue, "Loan exceeds collateral limit");
+
+        uint256 requiredCollateralValue = (requestedLoanValue * 100) / collateralFactor;
+        require(collateralValue >= requiredCollateralValue, "Insufficient collateral for this loan");
+
+        uint256 lockedCollateralValue = 0;
+        uint256 totalLockedCollateral = 0;
+
+        for (uint i = 0; i < supportedCollateralTokenAddresses.length; i++) {
+            address tokenAddress = supportedCollateralTokenAddresses[i];
+            uint256 availableAmount = collateralBalances[msg.sender][tokenAddress] - lockedCollateral[msg.sender][tokenAddress];
+
+            if (availableAmount > 0) {
+                uint256 tokenPrice = _getLatestPrice(supportedCollateralTokens[tokenAddress].priceFeed);
+                uint256 collateralDecimals = ERC20(tokenAddress).decimals();
+                uint256 availableValue = (availableAmount * tokenPrice) / (10**collateralDecimals);
+
+                if (availableValue > 0) {
+                    uint256 amountToLock;
+                    if (lockedCollateralValue + availableValue >= requiredCollateralValue) {
+                        amountToLock = ((requiredCollateralValue - lockedCollateralValue) * (10**collateralDecimals)) / tokenPrice;
+                    } else {
+                        amountToLock = availableAmount;
+                    }
+
+                    lockedCollateral[msg.sender][tokenAddress] += amountToLock;
+                    totalLockedCollateral += amountToLock;
+                    lockedCollateralValue += (amountToLock * tokenPrice) / (10**collateralDecimals);
+
+                    if (lockedCollateralValue >= requiredCollateralValue) {
+                        break;
+                    }
+                }
+            }
+        }
 
         loans[msg.sender] = Loan({
             principal: _amount,
             originationFee: originationFee,
-            collateralAmount: requiredCollateral,
+            collateralAmount: totalLockedCollateral,
             startTime: block.timestamp,
             isActive: true
         });
@@ -190,7 +271,7 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         // Get lending tokens from vault and send net amount to borrower
         vault.withdrawForLoan(msg.sender, netLoanAmount);
 
-        emit LoanTaken(msg.sender, _amount, requiredCollateral);
+        emit LoanTaken(msg.sender, _amount, totalLockedCollateral);
     }
 
     function repayLoan(uint256 _amount) external whenNotPaused nonReentrant onlyInitialized {
@@ -207,6 +288,11 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         userLoan.isActive = false;
         totalBorrowed -= userLoan.principal;
 
+        for (uint i = 0; i < supportedCollateralTokenAddresses.length; i++) {
+            address tokenAddress = supportedCollateralTokenAddresses[i];
+            lockedCollateral[msg.sender][tokenAddress] = 0;
+        }
+
         emit LoanRepaid(msg.sender, _amount, userLoan.originationFee);
 
         // Reset loan data
@@ -222,33 +308,115 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         require(healthFactor < 100, "Loan is not liquidatable");
 
         uint256 totalDebt = loan.principal + loan.originationFee;
-        uint256 collateralValue = loan.collateralAmount;
-        uint256 penalty = (collateralValue * liquidationPenalty) / BASIS_POINTS;
-        uint256 collateralToSeize = collateralValue + penalty;
+        uint256 totalDebtValue = (totalDebt * _getLatestPrice(lendingTokenPriceFeed)) / (10**ERC20(address(lendingToken)).decimals());
 
-        if (collateralToSeize > collateralBalances[_borrower]) {
-            collateralToSeize = collateralBalances[_borrower];
-        }
+        uint256 penaltyValue = (totalDebtValue * liquidationPenalty) / BASIS_POINTS;
+        uint256 collateralToSeizeValue = totalDebtValue + penaltyValue;
 
         require(lendingToken.transferFrom(msg.sender, address(this), totalDebt), "Debt repayment failed");
 
-        collateralBalances[_borrower] -= collateralToSeize;
-        totalCollateral -= collateralToSeize;
+        address[] memory sortedCollateral = _sortCollateral(_borrower);
+
+        uint256 seizedValue = 0;
+        for (uint i = 0; i < sortedCollateral.length; i++) {
+            address tokenAddress = sortedCollateral[i];
+            uint256 collateralAmount = collateralBalances[_borrower][tokenAddress];
+            if (collateralAmount > 0) {
+                uint256 tokenPrice = _getLatestPrice(supportedCollateralTokens[tokenAddress].priceFeed);
+                uint256 collateralDecimals = ERC20(tokenAddress).decimals();
+                uint256 value = (collateralAmount * tokenPrice) / (10**collateralDecimals);
+
+                if (value > 0) {
+                    uint256 amountToSeize;
+                    if (seizedValue + value >= collateralToSeizeValue) {
+                        amountToSeize = ((collateralToSeizeValue - seizedValue) * (10**collateralDecimals)) / tokenPrice;
+                    } else {
+                        amountToSeize = collateralAmount;
+                    }
+
+                    collateralBalances[_borrower][tokenAddress] -= amountToSeize;
+                    lockedCollateral[_borrower][tokenAddress] = 0;
+                    totalCollateral -= amountToSeize;
+                    require(IERC20(tokenAddress).transfer(msg.sender, amountToSeize), "Collateral transfer failed");
+                    seizedValue += (amountToSeize * tokenPrice) / (10**collateralDecimals);
+
+                    if (seizedValue >= collateralToSeizeValue) {
+                        break;
+                    }
+                }
+            }
+        }
+
         totalBorrowed -= loan.principal;
 
         loan.isActive = false;
         loan.principal = 0;
         loan.originationFee = 0;
 
-        require(collateralToken.transfer(msg.sender, collateralToSeize), "Collateral transfer failed");
-
-        emit LoanLiquidated(_borrower, msg.sender, collateralToSeize, totalDebt);
+        emit LoanLiquidated(_borrower, msg.sender, seizedValue, totalDebt);
     }
 
-    function _getLockedCollateral(address _user) internal view returns (uint256) {
-        Loan memory userLoan = loans[_user];
-        if (!userLoan.isActive) return 0;
-        return userLoan.collateralAmount;
+    function _sortCollateral(address _user) internal view returns (address[] memory) {
+        address[] memory collateral = new address[](supportedCollateralTokenAddresses.length);
+        uint256[] memory values = new uint256[](supportedCollateralTokenAddresses.length);
+
+        for (uint i = 0; i < supportedCollateralTokenAddresses.length; i++) {
+            address tokenAddress = supportedCollateralTokenAddresses[i];
+            uint256 collateralAmount = collateralBalances[_user][tokenAddress];
+            if (collateralAmount > 0) {
+                uint256 tokenPrice = _getLatestPrice(supportedCollateralTokens[tokenAddress].priceFeed);
+                uint256 collateralDecimals = ERC20(tokenAddress).decimals();
+                values[i] = (collateralAmount * tokenPrice) / (10**collateralDecimals);
+                collateral[i] = tokenAddress;
+            }
+        }
+
+        for (uint i = 1; i < collateral.length; i++) {
+            address tempAddress = collateral[i];
+            uint256 tempValue = values[i];
+            uint j = i;
+            while (j > 0 && values[j - 1] < tempValue) {
+                collateral[j] = collateral[j - 1];
+                values[j] = values[j - 1];
+                j--;
+            }
+            collateral[j] = tempAddress;
+            values[j] = tempValue;
+        }
+
+        return collateral;
+    }
+
+    function _getLockedCollateral(address _user, address _tokenAddress) internal view returns (uint256) {
+        return lockedCollateral[_user][_tokenAddress];
+    }
+
+    function _getLatestPrice(AggregatorV3Interface priceFeed) internal view returns (uint256) {
+        (, int256 price, , , ) = priceFeed.latestRoundData();
+        // Price is returned with 8 decimals, so we convert it to 18 decimals
+        return uint256(price) * 1e10;
+    }
+
+    function getCollateralValue(address _user) public view returns (uint256) {
+        uint256 collateralAmount = collateralBalances[_user];
+        if (collateralAmount == 0) {
+            return 0;
+        }
+        uint256 tokenPrice = _getLatestPrice(collateralTokenPriceFeed);
+        // collateralToken decimals should be taken into account
+        uint256 collateralDecimals = ERC20(address(collateralToken)).decimals();
+        return (collateralAmount * tokenPrice) / (10**collateralDecimals);
+    }
+
+    function getLoanValue(address _user) public view returns (uint256) {
+        Loan memory loan = loans[_user];
+        if (!loan.isActive) {
+            return 0;
+        }
+        uint256 loanAmount = loan.principal;
+        uint256 tokenPrice = _getLatestPrice(lendingTokenPriceFeed);
+        uint256 lendingDecimals = ERC20(address(lendingToken)).decimals();
+        return (loanAmount * tokenPrice) / (10**lendingDecimals);
     }
 
     function calculateHealthFactor(address _borrower) public view returns (uint256) {
@@ -257,13 +425,13 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         Loan memory loan = loans[_borrower];
         if (!loan.isActive) return type(uint256).max;
 
-        uint256 totalDebt = loan.principal + loan.originationFee;
-        if (totalDebt == 0) return type(uint256).max;
+        uint256 totalDebtValue = getLoanValue(_borrower);
+        if (totalDebtValue == 0) return type(uint256).max;
 
-        uint256 collateralValue = loan.collateralAmount;
+        uint256 collateralValue = getCollateralValue(_borrower);
         uint256 liquidationValue = (collateralValue * liquidationThreshold) / 100;
 
-        return (liquidationValue * 100) / totalDebt;
+        return (liquidationValue * 100) / totalDebtValue;
     }
 
     function getLoanDetails(address _user)
@@ -320,3 +488,4 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         require(_token.transfer(owner(), _amount), "Emergency withdrawal failed");
     }
 }
+
