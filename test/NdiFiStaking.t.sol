@@ -1,42 +1,55 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
+import {Test, console} from "forge-std/Test.sol";
 import {NdiStaking} from "../src/NdiFiStaking.sol";
 import {ERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
-import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import {ERC4626} from "lib/openzeppelin-contracts/contracts/token/ERC20/extensions/ERC4626.sol";
+import {NdiFiVault} from "src/NdiFiVault.sol";
 
-contract MockToken is ERC20 {
-    constructor(string memory name_, string memory symbol_) ERC20(name_, symbol_) {}
+// Simple mintable ERC20
+contract MockERC20 is ERC20 {
+    constructor(string memory name, string memory symbol) ERC20(name, symbol) {}
 
-    function mint(address to, uint256 amount) external {
+    function mint(address to, uint256 amount) public {
         _mint(to, amount);
     }
 }
 
-contract MockVault is ERC4626 {
-    constructor(IERC20 asset) ERC20("MockVault", "MVLT") ERC4626(asset) {}
-}
+contract NdiFiStakingTest is Test {
+    NdiStaking public stake;
+    MockERC20 public stakeToken;
+    MockERC20 public rewardToken;
+    NdiFiVault public vault;
 
-contract TestStakingSetup {
-    MockToken public stakeToken;
-    MockToken public rewardToken;
-    MockVault public vault;
-    NdiStaking public staking;
+    address public owner = makeAddr("owner");
+    address public staker = makeAddr("staker");
 
-    constructor() {
-        stakeToken = new MockToken("StakeToken", "STK");
-        rewardToken = new MockToken("RewardToken", "RWD");
-
-        stakeToken.mint(msg.sender, 1_000_000 ether);
-        rewardToken.mint(address(this), 1_000_000 ether);
-
-        vault = new MockVault(stakeToken);
-
-        staking = new NdiStaking(
-            address(stakeToken), address(rewardToken), address(vault), msg.sender, 1000, 1 ether, 1000 ether, 1 days
+    function setUp() public {
+        //deployed stake token
+        stakeToken = new MockERC20("stake Token", "ST");
+        //deploy reward token
+        vm.prank(owner);
+        rewardToken = new MockERC20("reward Token", "RT");
+        //deploy vault
+        vm.prank(owner);
+        vault = new NdiFiVault(address(stakeToken), owner);
+        stake = new NdiStaking(
+            address(stakeToken), address(rewardToken), address(vault), owner, 15, 10 * 1e18, 1000 * 1e18, 20 days
         );
+        //mint stake token to staker
+        stakeToken.mint(staker, 100 * 1e18);
 
-        stakeToken.approve(address(vault), type(uint256).max);
+        //mint reward token to staking contract
+        rewardToken.mint(address(stake), 1_000_000 * 1e18);
+        //approve staking contract to spend token
+        vm.prank(staker);
+        stakeToken.approve(address(stake), 50 * 1e18);
+    }
+
+    function testStake() external {
+        vm.prank(staker);
+        stake.stake(10 * 1e18);
+
+        assertEq(stake.totalStaked(), 10 * 1e18);
     }
 }
