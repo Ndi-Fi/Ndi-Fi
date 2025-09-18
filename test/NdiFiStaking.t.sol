@@ -4,12 +4,10 @@ pragma solidity ^0.8.19;
 import {NdiStaking} from "../src/NdiFiStaking.sol";
 import {ERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import {NdiFiVault} from "src/NdiFiVault.sol";
-import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import {ERC4626} from "lib/openzeppelin-contracts/contracts/token/ERC20/extensions/ERC4626.sol";
 
 // Simple mintable ERC20
-contract MockToken is ERC20 {
-    constructor(string memory name_, string memory symbol_) ERC20(name_, symbol_) {}
+contract MockERC20 is ERC20 {
+    constructor(string memory name, string memory symbol) ERC20(name, symbol) {}
 
     function mint(address to, uint256 amount) external {
         _mint(to, amount);
@@ -45,6 +43,13 @@ contract NdiFiStakingTest is Test {
         //approve staking contract to spend token
         vm.prank(staker);
         stakeToken.approve(address(stake), 50 * 1e18);
+    }
+
+    function testStake() external {
+        vm.prank(staker);
+        stake.stake(10 * 1e18);
+
+        assertEq(stake.totalStaked(), 10 * 1e18);
     }
 }
 
