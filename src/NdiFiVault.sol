@@ -116,7 +116,7 @@ contract NdiFiVault is ERC4626, Ownable {
         }
     }
 
-    function setStakingCap(uint256 newCap) public onlyOwner {
+    function setStakingCap(uint256 newCap) public onlyOwner 
         if (newCap <= 0) revert invalidAmount();
         stakingCap = newCap;
     }
