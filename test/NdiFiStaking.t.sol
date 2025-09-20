@@ -6,7 +6,6 @@ import {NdiStaking} from "../src/NdiFiStaking.sol";
 import {NdiFiVault} from "../src/NdiFiVault.sol";
 import {ERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 
-
 contract MockERC20 is ERC20 {
     constructor(string memory name, string memory symbol) ERC20(name, symbol) {}
 
@@ -33,24 +32,15 @@ contract NdiFiStakingTest is Test {
     uint256 constant WITHDRAW_WAIT = 21 days;
 
     function setUp() public {
-        
         stakeToken = new MockERC20("Stake Token", "ST");
         rewardToken = new MockERC20("Reward Token", "RT");
 
-       
         vm.prank(owner);
         vault = new NdiFiVault(address(stakeToken), owner);
 
         // Deploy staking contract
         stake = new NdiStaking(
-            address(stakeToken),
-            address(rewardToken),
-            address(vault),
-            owner,
-            APY,
-            MIN_STAKE,
-            MAX_STAKE,
-            MIN_DURATION
+            address(stakeToken), address(rewardToken), address(vault), owner, APY, MIN_STAKE, MAX_STAKE, MIN_DURATION
         );
 
         // Setup initial balances
@@ -64,8 +54,6 @@ contract NdiFiStakingTest is Test {
         vm.prank(staker2);
         stakeToken.approve(address(stake), type(uint256).max);
     }
-
-
 
     function testStake_SuccessfulStake() public {
         vm.prank(staker1);
@@ -113,19 +101,16 @@ contract NdiFiStakingTest is Test {
         vm.prank(staker1);
         stake.executeWithdrawal();
 
-       
         vm.prank(staker1);
         stake.stake(50 * 1e18);
 
         assertEq(stake.totalStaked(), 50 * 1e18);
     }
 
-
     function testPendingRewards_CalculatesCorrectly() public {
         vm.prank(staker1);
         stake.stake(100 * 1e18);
 
-       
         vm.warp(block.timestamp + 365 days);
 
         uint256 expectedRewards = (100 * 1e18 * APY * 365 days) / (100 * 365 days);
@@ -138,7 +123,6 @@ contract NdiFiStakingTest is Test {
         vm.prank(staker1);
         stake.stake(100 * 1e18);
 
-      
         vm.prank(staker1);
         stake.requestWithdrawal();
         vm.warp(block.timestamp + WITHDRAW_WAIT + 1);
@@ -165,8 +149,6 @@ contract NdiFiStakingTest is Test {
         uint256 secondClaim = stake.pendingRewards(staker1);
         assertEq(firstClaim, secondClaim); // Should be same amount
     }
-
-   
 
     function testClaimRewards_SuccessfulClaim() public {
         vm.prank(staker1);
@@ -200,7 +182,6 @@ contract NdiFiStakingTest is Test {
         stake.claimRewards();
     }
 
-   
     function testRequestWithdrawal_SuccessfulRequest() public {
         vm.prank(staker1);
         stake.stake(100 * 1e18);
@@ -231,8 +212,6 @@ contract NdiFiStakingTest is Test {
         vm.expectRevert("Already requested");
         stake.requestWithdrawal();
     }
-
-    
 
     function testExecuteWithdrawal_SuccessfulWithdrawal() public {
         vm.prank(staker1);
@@ -314,8 +293,6 @@ contract NdiFiStakingTest is Test {
         assertGt(rewardBalanceAfter, rewardBalanceBefore);
     }
 
-   
-
     function testGetProfits_WithGains() public {
         vm.prank(staker1);
         stake.stake(100 * 1e18);
@@ -347,8 +324,6 @@ contract NdiFiStakingTest is Test {
         assertEq(profits, 0); // Losses don't create negative profits
     }
 
-    
-
     function testSkimProfits_SuccessfulSkim() public {
         vm.prank(staker1);
         stake.stake(100 * 1e18);
@@ -379,8 +354,6 @@ contract NdiFiStakingTest is Test {
         vm.expectRevert();
         stake.skimProfits(attacker);
     }
-
-   
 
     function testFullStakeClaimWithdrawCycle() public {
         // Stake
@@ -440,20 +413,15 @@ contract NdiFiStakingTest is Test {
         uint256 rewards2 = rewardToken.balanceOf(staker2);
 
         // staker2 should have roughly 2x rewards of staker1
-        assertApproxEqRel(rewards2, rewards1 * 2, 0.01e18); 
+        assertApproxEqRel(rewards2, rewards1 * 2, 0.01e18);
     }
 
-    
-
     function testReentrancyProtection() public {
-
         vm.prank(staker1);
         stake.stake(100 * 1e18);
-
     }
 
     function testZeroAddressProtection() public {
-       
         vm.prank(staker1);
         vm.expectRevert("Stake amount invalid");
         stake.stake(0);
@@ -473,23 +441,19 @@ contract NdiFiStakingTest is Test {
         assertGt(rewards2, rewards1);
     }
 
-
     function testVaultMaintenanceMode() public {
         vm.prank(staker1);
         stake.stake(100 * 1e18);
 
-    
         vm.prank(owner);
         vault.pauseVault();
-
 
         vm.prank(staker1);
         stake.requestWithdrawal();
 
-       
         vm.warp(block.timestamp + WITHDRAW_WAIT + 1);
         vm.prank(staker1);
-        vm.expectRevert(); 
+        vm.expectRevert();
         stake.executeWithdrawal();
     }
 
@@ -497,7 +461,6 @@ contract NdiFiStakingTest is Test {
         // Set low staking cap on vault
         vm.prank(owner);
         vault.setStakingCap(50 * 1e18);
-
 
         vm.prank(staker1);
         vm.expectRevert();
@@ -508,17 +471,14 @@ contract NdiFiStakingTest is Test {
         vm.prank(staker1);
         stake.stake(100 * 1e18);
 
-    
         assertEq(vault.balanceOf(address(stake)), 100 * 1e18);
 
-   
         vm.prank(staker1);
         stake.requestWithdrawal();
         vm.warp(block.timestamp + WITHDRAW_WAIT + 1);
         vm.prank(staker1);
         stake.executeWithdrawal();
 
-      
         assertEq(vault.balanceOf(address(stake)), 0);
     }
 }
