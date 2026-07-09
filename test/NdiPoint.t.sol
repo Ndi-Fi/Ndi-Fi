@@ -180,9 +180,6 @@ contract NdiPointTest is Test {
     }
 
     function testPermitFunctionality() public view {
-        // uint256 permitAmount = 1000 * 10 ** 18;
-        // uint256 deadline = block.timestamp + 1 hours;
-
         // This would require proper signature creation for a full test
         // For now, we just test that the permit function exists
         bytes32 domainSeparator = ndiPoint.DOMAIN_SEPARATOR();
