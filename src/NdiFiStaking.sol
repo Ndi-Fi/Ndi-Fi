@@ -99,8 +99,8 @@ contract NdiStaking is Ownable, ReentrancyGuard {
         uint256 reward = pendingRewards(msg.sender);
         require(reward > 0, "No rewards");
 
-        // Assuming rewardToken supports minting to this contract
-        ERC20(address(rewardToken)).transfer(msg.sender, reward);
+        // Transfer reward tokens from contract to user
+        rewardToken.safeTransfer(msg.sender, reward);
 
         s.rewardsClaimed += reward;
         emit RewardClaimed(msg.sender, reward);
@@ -127,22 +127,34 @@ contract NdiStaking is Ownable, ReentrancyGuard {
         StakeInfo storage s = stakes[msg.sender];
         require(!s.withdrawn, "Already withdrawn");
 
+        // Calculate reward BEFORE marking as withdrawn
+        uint256 reward = pendingRewards(msg.sender);
+
+        // Store values before withdrawal
+        uint256 stakedAmount = s.amount;
+
+        // Mark as withdrawn
         s.withdrawn = true;
 
-        // Withdraw principal from vault
-        vault.withdraw(s.amount, msg.sender, address(this));
+        // Withdraw principal from vault by redeeming all shares owned by this contract
+        uint256 sharesToRedeem = vault.balanceOf(address(this));
+        vault.redeem(sharesToRedeem, msg.sender, address(this));
 
-        uint256 reward = pendingRewards(msg.sender);
         if (reward > 0) {
-            ERC20(address(rewardToken)).transfer(msg.sender, reward);
+            rewardToken.safeTransfer(msg.sender, reward);
+            s.rewardsClaimed += reward;
         }
 
-        totalStaked -= s.amount;
+        totalStaked -= stakedAmount;
 
         delete withdrawalRequests[msg.sender];
-        delete stakes[msg.sender];
 
-        emit Withdrawn(msg.sender, s.amount, reward);
+        emit Withdrawn(msg.sender, stakedAmount, reward);
+
+        // Don't delete stake info - just mark it as withdrawn with amount = 0
+        // This allows external contracts to verify the withdrawal status
+        s.amount = 0;
+        // s.withdrawn is already set to true above
     }
 
     function getProfits() public view returns (uint256) {
