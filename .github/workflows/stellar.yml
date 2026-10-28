@@ -1,0 +1,73 @@
+name: Stellar (Soroban)
+
+on:
+  push:
+    paths:
+      - "stellar/**"
+      - ".github/workflows/stellar.yml"
+  pull_request:
+    paths:
+      - "stellar/**"
+      - ".github/workflows/stellar.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  STELLAR_CLI_VERSION: "28.1.0"
+
+defaults:
+  run:
+    working-directory: stellar
+
+jobs:
+  check:
+    name: fmt, clippy, test, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # rustup reads stellar/rust-toolchain.toml (pinned toolchain + wasm32v1-none).
+      - name: Install Rust toolchain
+        run: |
+          rustup toolchain install
+          rustc --version
+          cargo --version
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            stellar/target
+          key: stellar-${{ runner.os }}-${{ hashFiles('stellar/Cargo.lock', 'stellar/rust-toolchain.toml') }}
+          restore-keys: stellar-${{ runner.os }}-
+
+      - name: Install Stellar CLI
+        run: |
+          curl -sSfL -o /tmp/stellar-cli.tar.gz \
+            "https://github.com/stellar/stellar-cli/releases/download/v${STELLAR_CLI_VERSION}/stellar-cli-${STELLAR_CLI_VERSION}-x86_64-unknown-linux-gnu.tar.gz"
+          mkdir -p "$HOME/.local/bin"
+          tar -xzf /tmp/stellar-cli.tar.gz -C "$HOME/.local/bin" stellar
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: cargo fmt --check
+        run: cargo fmt --all --check
+
+      - name: cargo clippy
+        run: cargo clippy --all-targets --locked -- -D warnings
+
+      - name: cargo test
+        run: cargo test --locked
+
+      - name: stellar contract build
+        run: |
+          stellar --version
+          stellar contract build
+          for c in ndi_token ndi_lending ndi_staking; do
+            test -f "target/wasm32v1-none/release/${c}.wasm"
+            ls -l "target/wasm32v1-none/release/${c}.wasm"
+          done
