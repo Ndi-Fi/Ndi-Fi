@@ -1,0 +1,22 @@
+# Test-only crate: deploys token + lending + staking together (see integration.rs).
+[package]
+name = "ndi-fi-integration-tests"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+autolib = false
+
+[[test]]
+name = "integration"
+path = "integration.rs"
+
+[dev-dependencies]
+soroban-sdk = { workspace = true, features = ["testutils"] }
+ndi-token = { workspace = true }
+ndi-lending = { workspace = true }
+ndi-staking = { workspace = true }
