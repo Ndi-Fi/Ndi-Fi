@@ -71,3 +71,15 @@ jobs:
             test -f "target/wasm32v1-none/release/${c}.wasm"
             ls -l "target/wasm32v1-none/release/${c}.wasm"
           done
+
+      # Retention is documented in CONTRIBUTING.md ("CI artifacts").
+      - name: Upload compiled .wasm contracts
+        uses: actions/upload-artifact@v4
+        with:
+          name: stellar-wasm-${{ github.sha }}
+          path: |
+            stellar/target/wasm32v1-none/release/ndi_token.wasm
+            stellar/target/wasm32v1-none/release/ndi_lending.wasm
+            stellar/target/wasm32v1-none/release/ndi_staking.wasm
+          if-no-files-found: error
+          retention-days: 14
