@@ -1,0 +1,105 @@
+# Label definitions for Ndi-Fi/Ndi-Fi.
+# Edit this file and open a PR to propose changes.
+# The sync-labels workflow reconciles these to the repo on every merge to main.
+#
+# Fields:
+#   name:        label text shown in GitHub (required)
+#   color:       6-digit hex, no leading #  (required)
+#   description: short tooltip (optional, max 100 chars)
+
+# ── Type ──────────────────────────────────────────────────────────────────────
+- name: "type: bug"
+  color: "d73a4a"
+  description: "Something isn't working"
+
+- name: "type: feature"
+  color: "a2eeef"
+  description: "New feature or request"
+
+- name: "type: docs"
+  color: "0075ca"
+  description: "Improvements or additions to documentation"
+
+- name: "type: test"
+  color: "e4e669"
+  description: "Adding or improving tests"
+
+- name: "type: ci"
+  color: "bfd4f2"
+  description: "CI/CD configuration changes"
+
+- name: "type: refactor"
+  color: "d4c5f9"
+  description: "Code change that neither fixes a bug nor adds a feature"
+
+- name: "type: security"
+  color: "ee0701"
+  description: "Security-related change or disclosure"
+
+# ── Status ────────────────────────────────────────────────────────────────────
+- name: "status: needs triage"
+  color: "ededed"
+  description: "Awaiting maintainer review"
+
+- name: "status: in progress"
+  color: "fbca04"
+  description: "Actively being worked on"
+
+- name: "status: blocked"
+  color: "e4e669"
+  description: "Blocked on another issue or external factor"
+
+- name: "status: ready for review"
+  color: "0e8a16"
+  description: "PR is ready for maintainer review"
+
+# ── Priority ──────────────────────────────────────────────────────────────────
+- name: "priority: critical"
+  color: "b60205"
+  description: "Must be resolved immediately"
+
+- name: "priority: high"
+  color: "e11d48"
+  description: "High priority"
+
+- name: "priority: medium"
+  color: "f97316"
+  description: "Medium priority"
+
+- name: "priority: low"
+  color: "84cc16"
+  description: "Low priority"
+
+# ── Scope ─────────────────────────────────────────────────────────────────────
+- name: "scope: stellar"
+  color: "7dd3fc"
+  description: "Affects Soroban / Stellar contracts"
+
+- name: "scope: solidity"
+  color: "c4b5fd"
+  description: "Affects Solidity / Foundry contracts"
+
+- name: "scope: docs"
+  color: "93c5fd"
+  description: "Affects documentation only"
+
+- name: "scope: ci"
+  color: "a5f3fc"
+  description: "Affects CI/CD pipelines"
+
+# ── Misc ──────────────────────────────────────────────────────────────────────
+- name: "good first issue"
+  color: "7057ff"
+  description: "Good for newcomers"
+
+- name: "help wanted"
+  color: "008672"
+  description: "Extra attention is needed"
+
+- name: "duplicate"
+  color: "cfd3d7"
+  description: "This issue or PR already exists"
+
+- name: "wontfix"
+  color: "ffffff"
+  description: "This will not be worked on"
