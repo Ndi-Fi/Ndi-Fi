@@ -10,10 +10,16 @@ permissions:   # allows the workflow to read repo contents (no write needed for 
 
 env:
   FOUNDRY_PROFILE: ci
+  # Supported toolchain. Keep in sync with "Supported toolchain versions" in CONTRIBUTING.md.
+  PINNED_FOUNDRY_VERSION: "1.2.3"
+  PINNED_SOLC_VERSION: "0.8.30"
+  # How long build outputs are kept. Documented in CONTRIBUTING.md.
+  ARTIFACT_RETENTION_DAYS: 14
 
 jobs:
   check:
-    name: Foundry project
+    # Pinned toolchain. This is the only Foundry job that blocks merges.
+    name: Foundry project (pinned, blocking)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,7 +29,7 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: 1.2.3    # pin to your local version
+          version: ${{ env.PINNED_FOUNDRY_VERSION }}
 
       - name: Show Forge version
         run: forge --version
@@ -33,9 +39,50 @@ jobs:
         id: fmt
 
       - name: Run Forge build
-        run: forge build --sizes
+        run: forge build --sizes --use "${PINNED_SOLC_VERSION}"
         id: build
 
       - name: Run Forge tests
-        run: forge test -vvv
+        run: forge test -vvv --use "${PINNED_SOLC_VERSION}"
         id: test
+
+      - name: Upload forge out/ artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: forge-out-${{ github.sha }}
+          path: out/
+          if-no-files-found: error
+          retention-days: ${{ env.ARTIFACT_RETENTION_DAYS }}
+
+  compat:
+    # Non-pinned toolchains. Informational only: failures are reported but never
+    # block a merge, because continue-on-error keeps the workflow green.
+    name: Foundry ${{ matrix.foundry }} / solc ${{ matrix.solc }} (informational)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { foundry: stable, solc: "0.8.30" }
+          - { foundry: nightly, solc: "0.8.30" }
+          - { foundry: "1.2.3", solc: "0.8.24" }
+          - { foundry: "1.2.3", solc: "0.8.28" }
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: ${{ matrix.foundry }}
+
+      - name: Show Forge version
+        run: forge --version
+
+      - name: Run Forge build
+        run: forge build --sizes --use "${{ matrix.solc }}"
+
+      - name: Run Forge tests
+        run: forge test -vvv --use "${{ matrix.solc }}"

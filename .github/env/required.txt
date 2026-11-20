@@ -1,0 +1,4 @@
+# Environment variables that must be documented in .env.example.
+# One name per line. Lines starting with # are ignored.
+# Checked by .github/scripts/check_env.py in the env-check workflow.
+PRIVATE_KEY

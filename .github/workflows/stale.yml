@@ -1,0 +1,55 @@
+name: Stale issues and PRs
+
+# Policy: see "Stale issue and PR policy" in CONTRIBUTING.md.
+# Review these thresholds every quarter (Jan, Apr, Jul, Oct).
+
+on:
+  schedule:
+    - cron: "30 1 * * *"   # daily, 01:30 UTC
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v9
+        with:
+          # Issues: 60 days idle -> stale, then 14 more days -> closed.
+          days-before-issue-stale: 60
+          days-before-issue-close: 14
+          # PRs: 30 days idle -> stale, then 14 more days -> closed.
+          days-before-pr-stale: 30
+          days-before-pr-close: 14
+
+          stale-issue-label: stale
+          stale-pr-label: stale
+          remove-stale-when-updated: true
+
+          # Never mark these as stale.
+          exempt-issue-labels: "pinned,security,Stellar Wave,wave"
+          exempt-pr-labels: "pinned,security,Stellar Wave,wave"
+          exempt-all-milestones: true
+          exempt-all-assignees: true
+          exempt-draft-pr: false
+
+          stale-issue-message: >
+            This issue has had no activity for 60 days and is now marked stale.
+            It will be closed in 14 days unless there is new activity. Comment
+            or remove the `stale` label to keep it open. See the stale policy in
+            CONTRIBUTING.md.
+          close-issue-message: >
+            Closed after 14 days as stale. Comment if it is still relevant and a
+            maintainer will reopen it.
+          stale-pr-message: >
+            This PR has had no activity for 30 days and is now marked stale.
+            It will be closed in 14 days unless there is new activity. Push a
+            commit, comment, or remove the `stale` label to keep it open.
+          close-pr-message: >
+            Closed after 14 days as stale. You can reopen it or open a new PR
+            when you pick the work back up.
+
+          operations-per-run: 100

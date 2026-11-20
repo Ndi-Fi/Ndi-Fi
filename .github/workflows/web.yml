@@ -1,0 +1,86 @@
+name: Web
+
+# Builds the web app and uploads its build output as an artifact.
+# The app is expected in one of WEB_DIR_CANDIDATES. Until one of those
+# directories has a package.json, the build job is skipped (not failed).
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  WEB_DIR_CANDIDATES: "web frontend app"
+  NODE_VERSION: "20"
+  # How long build outputs are kept. Documented in CONTRIBUTING.md.
+  ARTIFACT_RETENTION_DAYS: 14
+
+jobs:
+  detect:
+    name: Detect web app
+    runs-on: ubuntu-latest
+    outputs:
+      dir: ${{ steps.find.outputs.dir }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Find web app directory
+        id: find
+        run: |
+          for d in ${WEB_DIR_CANDIDATES}; do
+            if [ -f "$d/package.json" ]; then
+              echo "Found web app in $d/"
+              echo "dir=$d" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          done
+          echo "No web app found (looked in: ${WEB_DIR_CANDIDATES}). Skipping build."
+
+  build:
+    name: Build web app
+    needs: detect
+    if: needs.detect.outputs.dir != ''
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ needs.detect.outputs.dir }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          if [ -f pnpm-lock.yaml ]; then corepack enable && pnpm install --frozen-lockfile
+          elif [ -f yarn.lock ]; then corepack enable && yarn install --frozen-lockfile
+          elif [ -f package-lock.json ]; then npm ci
+          else npm install
+          fi
+
+      - name: Build
+        run: npm run build
+
+      - name: Locate build output
+        id: out
+        run: |
+          for d in dist build out .next; do
+            if [ -d "$d" ]; then
+              echo "path=${{ needs.detect.outputs.dir }}/$d" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          done
+          echo "error: no build output found (looked for dist/, build/, out/, .next/)" >&2
+          exit 1
+
+      - name: Upload web build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-build-${{ github.sha }}
+          path: ${{ steps.out.outputs.path }}
+          if-no-files-found: error
+          retention-days: ${{ env.ARTIFACT_RETENTION_DAYS }}

@@ -1,0 +1,60 @@
+name: Env check
+
+# Validates .env.example against .github/env/required.txt and against the
+# environment variables the code actually reads. See CONTRIBUTING.md.
+
+on:
+  push:
+    paths:
+      - ".env.example"
+      - ".github/env/**"
+      - ".github/scripts/check_env.py"
+      - ".github/workflows/env-check.yml"
+      - "foundry.toml"
+      - "script/**"
+      - "src/**"
+      - "stellar/scripts/**"
+      - "stellar/**/*.rs"
+      - "**/package.json"
+      - "**/*.js"
+      - "**/*.ts"
+      - "**/*.tsx"
+      - "**/*.jsx"
+      - "**/*.config.*"
+      - "**/*.py"
+  pull_request:
+    paths:
+      - ".env.example"
+      - ".github/env/**"
+      - ".github/scripts/check_env.py"
+      - ".github/workflows/env-check.yml"
+      - "foundry.toml"
+      - "script/**"
+      - "src/**"
+      - "stellar/scripts/**"
+      - "stellar/**/*.rs"
+      - "**/package.json"
+      - "**/*.js"
+      - "**/*.ts"
+      - "**/*.tsx"
+      - "**/*.jsx"
+      - "**/*.config.*"
+      - "**/*.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  env-check:
+    name: Validate .env.example
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check env vars
+        run: python3 .github/scripts/check_env.py --strict
