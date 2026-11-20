@@ -1,0 +1,7 @@
+[book]
+title = "Ndi-Fi on Stellar"
+src = "."
+language = "en"
+
+[output.html]
+no-section-label = false

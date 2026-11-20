@@ -1,0 +1,73 @@
+# Local development stack for Ndi-Fi.
+#
+# Inspect service health:
+#   docker compose ps                # shows State and Health columns
+#   docker compose logs <service>    # view logs for a specific service
+#   docker inspect --format='{{json .State.Health}}' <container>
+#
+# Cold-start reliability:
+#   The depends_on condition: service_healthy ensures that dependent
+#   services wait until healthchecks pass before starting. Run
+#   `docker compose up --wait` to block until all services are healthy.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ndifi
+      POSTGRES_PASSWORD: ndifi
+      POSTGRES_DB: ndifi
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ndifi -d ndifi"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  horizon:
+    image: stellar/quickstart:latest
+    ports:
+      - "8000:8000"
+    environment:
+      NETWORK: testnet
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8000/ > /dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+
+  api:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgres://ndifi:ndifi@postgres:5432/ndifi
+      REDIS_URL: redis://redis:6379
+      HORIZON_URL: http://horizon:8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      horizon:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:3000/health > /dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
