@@ -1,0 +1,119 @@
+name: Storage Layout Compatibility
+
+on:
+  push:
+    paths:
+      - "stellar/contracts/**"
+      - ".github/workflows/storage-layout.yml"
+  pull_request:
+    paths:
+      - "stellar/contracts/**"
+      - ".github/workflows/storage-layout.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  STELLAR_CLI_VERSION: "28.1.0"
+
+defaults:
+  run:
+    working-directory: stellar
+
+jobs:
+  storage-layout:
+    name: Check storage layout compatibility
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0   # need history to compare base vs head
+
+      - name: Install Rust toolchain
+        run: |
+          rustup toolchain install
+          rustc --version
+          cargo --version
+
+      - name: Cache cargo
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            stellar/target
+          key: stellar-${{ runner.os }}-${{ hashFiles('stellar/Cargo.lock', 'stellar/rust-toolchain.toml') }}
+          restore-keys: stellar-${{ runner.os }}-
+
+      - name: Install Stellar CLI
+        run: |
+          curl -sSfL -o /tmp/stellar-cli.tar.gz \
+            "https://github.com/stellar/stellar-cli/releases/download/v${STELLAR_CLI_VERSION}/stellar-cli-${STELLAR_CLI_VERSION}-x86_64-unknown-linux-gnu.tar.gz"
+          mkdir -p "$HOME/.local/bin"
+          tar -xzf /tmp/stellar-cli.tar.gz -C "$HOME/.local/bin" stellar
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Build contracts (HEAD)
+        run: stellar contract build
+
+      - name: Extract storage layouts (HEAD)
+        run: |
+          mkdir -p /tmp/layouts/head
+          for contract in ndi_token ndi_lending ndi_staking; do
+            stellar contract inspect \
+              --wasm "target/wasm32v1-none/release/${contract}.wasm" \
+              --output json \
+              > "/tmp/layouts/head/${contract}.json" 2>/dev/null || \
+            stellar contract inspect \
+              --wasm "target/wasm32v1-none/release/${contract}.wasm" \
+              > "/tmp/layouts/head/${contract}.txt"
+          done
+
+      - name: Checkout base commit
+        if: github.event_name == 'pull_request'
+        run: git checkout "${{ github.event.pull_request.base.sha }}" -- .
+
+      - name: Build contracts (BASE)
+        if: github.event_name == 'pull_request'
+        run: stellar contract build
+
+      - name: Extract storage layouts (BASE)
+        if: github.event_name == 'pull_request'
+        run: |
+          mkdir -p /tmp/layouts/base
+          for contract in ndi_token ndi_lending ndi_staking; do
+            stellar contract inspect \
+              --wasm "target/wasm32v1-none/release/${contract}.wasm" \
+              --output json \
+              > "/tmp/layouts/base/${contract}.json" 2>/dev/null || \
+            stellar contract inspect \
+              --wasm "target/wasm32v1-none/release/${contract}.wasm" \
+              > "/tmp/layouts/base/${contract}.txt"
+          done
+
+      - name: Restore HEAD sources
+        if: github.event_name == 'pull_request'
+        run: git checkout "${{ github.sha }}" -- .
+
+      - name: Compare storage layouts
+        if: github.event_name == 'pull_request'
+        run: |
+          failed=0
+          for contract in ndi_token ndi_lending ndi_staking; do
+            echo "=== Comparing ${contract} ==="
+            base_file="/tmp/layouts/base/${contract}.json"
+            head_file="/tmp/layouts/head/${contract}.json"
+            # Fall back to .txt if .json was not produced
+            [ -f "$base_file" ] || base_file="/tmp/layouts/base/${contract}.txt"
+            [ -f "$head_file" ] || head_file="/tmp/layouts/head/${contract}.txt"
+            if diff -u "$base_file" "$head_file"; then
+              echo "  OK — no layout change"
+            else
+              echo "  FAIL — storage layout changed for ${contract}."
+              echo "  Upgradeable contracts require a migration plan."
+              echo "  See docs/stellar/ARCHITECTURE.md#upgrades."
+              failed=1
+            fi
+          done
+          exit $failed

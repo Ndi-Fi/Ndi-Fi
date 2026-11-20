@@ -12,6 +12,16 @@ The Solidity contracts in `src/` follow their own Foundry workflow.
 - Keep PRs to one issue. Do not change files outside `stellar/` or `docs/stellar/` unless the issue says so. In particular, do not touch the Solidity code in `src/`, `test/` or `script/`.
 - Report security problems privately to the maintainers, not in a public issue.
 
+## Quick start
+
+Run the bootstrap script from the repository root to install submodules, build both Foundry and Soroban contracts, and run all tests in one shot:
+
+```bash
+./bootstrap.sh
+```
+
+The script checks for missing tools ([Foundry](https://book.getfoundry.sh/getting-started/installation), [Rust/rustup](https://rustup.rs), [Node.js ≥ 18](https://nodejs.org), [Stellar CLI 28.x](https://github.com/stellar/stellar-cli/releases)) and tells you what to install before it proceeds.
+
 ## Setup
 
 1. **Rust.** Install [rustup](https://rustup.rs). The toolchain version, the `wasm32v1-none` target, `rustfmt` and `clippy` are pinned in `stellar/rust-toolchain.toml`, so this installs everything:
@@ -85,6 +95,28 @@ Contract code rules:
 - Use `checked_*` math on `i128`. No floats.
 - Emit an event for every state change users or indexers care about.
 - Every public function has a `///` doc comment.
+
+## Linting GitHub Actions workflows locally
+
+[actionlint](https://github.com/rhysd/actionlint) catches misconfigured workflows before they reach CI.
+
+Install it once:
+
+```bash
+# macOS
+brew install actionlint
+
+# Linux — download the binary
+bash <(curl -s https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+```
+
+Then run it from the repository root:
+
+```bash
+actionlint
+```
+
+CI runs the same check on every change to `.github/workflows/**`.
 
 ## Pull requests
 
