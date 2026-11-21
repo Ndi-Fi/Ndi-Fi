@@ -196,6 +196,18 @@ graph TD
 
 ---
 
+## 📚 **Security & Protocol Documentation**
+
+| Document | What it covers |
+|---|---|
+| [`docs/ORACLE.md`](docs/ORACLE.md) | Price feed / oracle configuration: Chainlink feeds per collateral, staleness/deviation/fallback status, and how to add a new collateral feed |
+| [`docs/UPGRADEABILITY.md`](docs/UPGRADEABILITY.md) | Upgradeability and admin model across the Solidity and Stellar contracts, governance roadmap, upgrade verification, key management |
+| [`docs/VAULT_ERC4626.md`](docs/VAULT_ERC4626.md) | NdiFiVault ERC-4626 conformance, deviations, fees/rounding, slippage limits, property tests, asset recovery |
+| [`docs/AUDIT_READINESS.md`](docs/AUDIT_READINESS.md) | Repeatable audit-readiness checklist: tests, invariants, static analysis, known issues, auditor scope template |
+
+---
+
+
 ## Stellar (Soroban)
 
 Ndi-Fi also has a Stellar implementation written in Rust for

@@ -108,4 +108,5 @@ pausable 1000+, fixed-point math 1500+, ownable 2100+.
 Each contract implements OpenZeppelin `Upgradeable`: the owner uploads new WASM
 and calls `upgrade(new_wasm_hash, operator)`. Storage is kept. There are no
 proxies. Any change to storage layout needs a migration plan (see
-`WAVE_ISSUES.md`).
+`WAVE_ISSUES.md`). The full upgrade procedure, verification steps and key
+management guidance live in [`UPGRADEABILITY.md`](../UPGRADEABILITY.md).

@@ -195,7 +195,9 @@ These are observations only; nothing in `src/` was changed.
 
 The MVP has no price oracle. To port `NdiFiLending` (collateralised loans,
 health factor, liquidation), the planned source is **Reflector**, a SEP-40
-price oracle on Stellar. The design is tracked in `WAVE_ISSUES.md`.
+price oracle on Stellar. The design is tracked in `WAVE_ISSUES.md`. The
+Ethereum-side oracle configuration, its known gaps and the target hardening
+parameters are documented in [`ORACLE.md`](ORACLE.md).
 
 ## 6. Open questions for maintainers
 
