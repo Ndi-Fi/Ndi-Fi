@@ -86,6 +86,40 @@ Contract code rules:
 - Emit an event for every state change users or indexers care about.
 - Every public function has a `///` doc comment.
 
+## Branch protection rules for `main`
+
+The `main` branch is protected with the following rules (issue #222):
+
+| Rule | Setting |
+|---|---|
+| Required status checks | `Foundry project` (test.yml) and `fmt, clippy, test, build` (stellar.yml) must pass |
+| Required PR reviews | At least **1 approving review** from a [CODEOWNER](#codeowners) before merge |
+| Dismiss stale reviews | Enabled — a new push dismisses existing approvals |
+| Require linear history | Enabled — no merge commits; rebase or squash only |
+| Signed commits | Required on `main` |
+| Direct pushes | Blocked for everyone including admins |
+
+If a required check is not applicable to a given PR (e.g. a docs-only change
+does not trigger the Stellar workflow), a maintainer may bypass that specific
+check after confirming no contract code changed.
+
+## CODEOWNERS
+
+`.github/CODEOWNERS` routes review requests to the right team by path
+(issue #223):
+
+| Path | Reviewer team |
+|---|---|
+| `src/`, `test/`, `script/`, `lib/` | `@Ndi-Fi/solidity-reviewers` |
+| `stellar/` | `@Ndi-Fi/stellar-reviewers` |
+| `apps/web/` | `@Ndi-Fi/frontend-reviewers` |
+| `.github/`, `*.md`, `docs/` | `@Ndi-Fi/maintainers` |
+| Everything else | `@Ndi-Fi/maintainers` (fallback) |
+
+GitHub automatically requests a review from the matching team when you open a
+PR.  You do not need to add reviewers manually.  Keep CODEOWNERS current as the
+team changes — an outdated entry silently routes reviews to the wrong people.
+
 ## Pull requests
 
 Fill in the PR template: `Closes #<issue>`, what changed, how you tested it,
