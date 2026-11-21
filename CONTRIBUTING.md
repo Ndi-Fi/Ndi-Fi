@@ -62,6 +62,22 @@ test(token): cover burn_from
 
 Scopes: `token`, `lending`, `staking`, `stellar` (workspace, CI, scripts), `docs`.
 
+## Pre-commit hooks (optional, recommended)
+
+Install [pre-commit](https://pre-commit.com) to catch formatting and lint issues
+locally before CI:
+
+```bash
+pip install pre-commit  # or pipx/brew
+pre-commit install
+pre-commit run --all-files  # optional
+```
+
+Hooks are configured in `.pre-commit-config.yaml` (Foundry `forge fmt`, Stellar
+`cargo fmt`, Prettier, ESLint, and basic hygiene checks). Hooks that require
+tools you don't have installed are skipped. See [DEVELOPMENT.md](DEVELOPMENT.md)
+for details.
+
 ## Before you open a PR
 
 Run these in `stellar/`. CI runs the same checks.
@@ -71,6 +87,14 @@ cargo fmt --all --check
 cargo clippy --all-targets -- -D warnings
 cargo test
 stellar contract build
+```
+
+For Solidity changes, run the Foundry checks used in CI:
+
+```bash
+forge fmt --check
+forge build --sizes
+forge test -vvv
 ```
 
 The root `.gitignore` ignores `docs/` (Foundry's generated docs). Files in

@@ -221,6 +221,13 @@ Setup, deployment and design notes: [`stellar/README.md`](stellar/README.md),
 
 This project takes part in the
 [Stellar Wave Program](https://www.drips.network/wave/stellar). See
-[`CONTRIBUTING.md`](CONTRIBUTING.md) before picking up an issue.
+[`CONTRIBUTING.md`](CONTRIBUTING.md) and [DEVELOPMENT.md](DEVELOPMENT.md) before picking up an issue.
 
 > **Do not start work on an issue until a maintainer assigns it to you. Comment on the issue to express interest.**
+
+## CI, deployments, and security
+
+- **Pre-commit (local):** optional formatting/lint hooks (`forge fmt`, `cargo fmt`, Prettier, ESLint). See [DEVELOPMENT.md](DEVELOPMENT.md).
+- **Solidity verification:** [`Verify Solidity Contracts`](.github/workflows/verify-solidity.yml) runs on tagged releases or manual dispatch (`forge verify-contract`, `ETHERSCAN_API_KEY` secret). Document verification status in release notes.
+- **Stellar testnet deploy:** [`Deploy Stellar Contracts (Testnet)`](.github/workflows/deploy-stellar-testnet.yml) is manual-dispatch only, requires approval via the `stellar-testnet` environment, uploads `deployments/testnet.json` as an artifact, and posts a deploy summary comment.
+- **Security:** see [SECURITY.md](SECURITY.md) for vulnerability reporting, secret scanning/push protection expectations, and dependency review policy.

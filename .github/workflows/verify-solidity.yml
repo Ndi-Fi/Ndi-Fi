@@ -1,0 +1,90 @@
+name: Verify Solidity Contracts (Etherscan)
+
+on:
+  workflow_dispatch:
+    inputs:
+      chain:
+        description: "Target network (e.g. sepolia, mainnet, holesky, base-sepolia)"
+        required: true
+        type: string
+      rpc_url:
+        description: "RPC URL for the target network"
+        required: true
+        type: string
+      contract_address:
+        description: "Deployed contract address (0x...)"
+        required: true
+        type: string
+      contract:
+        description: "Contract identifier (path:Name), e.g. src/core/NdiLending.sol:NdiLending"
+        required: true
+        type: string
+      constructor_args:
+        description: "ABI-encoded constructor args (hex) if required"
+        required: false
+        type: string
+        default: ""
+      compiler_version:
+        description: "Optional solc version (e.g. v0.8.20+commit.a1b79de6)"
+        required: false
+        type: string
+        default: ""
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: forge verify-contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: 1.2.3
+
+      - name: Show Forge version
+        run: forge --version
+
+      - name: Verify contract (manual dispatch)
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
+        run: |
+          set -euo pipefail
+          ARGS=(
+            "${{ inputs.contract_address }}"
+            "${{ inputs.contract }}"
+            --chain "${{ inputs.chain }}"
+            --rpc-url "${{ inputs.rpc_url }}"
+            --etherscan-api-key "$ETHERSCAN_API_KEY"
+            --watch
+          )
+          if [ -n "${{ inputs.constructor_args }}" ]; then
+            ARGS+=(--constructor-args "${{ inputs.constructor_args }}")
+          fi
+          if [ -n "${{ inputs.compiler_version }}" ]; then
+            ARGS+=(--compiler-version "${{ inputs.compiler_version }}")
+          fi
+          echo "Running: forge verify-contract <address> <contract> --chain ${{ inputs.chain }} ..."
+          forge verify-contract "${ARGS[@]}"
+
+      - name: Tagged release notice
+        if: github.event_name == 'push'
+        run: |
+          {
+            echo "## Solidity verification"
+            echo ""
+            echo "This run was triggered by tag \`${GITHUB_REF_NAME}\`."
+            echo "To verify deployed contracts on Etherscan, run this workflow manually via **Actions → Verify Solidity Contracts (Etherscan) → Run workflow** with the deployment address, contract, chain, and RPC URL."
+            echo "Record verification status in the GitHub release notes."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "Tag-triggered run: manual verification inputs required. See workflow summary." >&2
+          exit 1
