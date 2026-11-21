@@ -16,6 +16,16 @@
 - [Contributing](#contributing)
 - [License](#license)
 
+### 📖 Key Documentation
+
+| Document | Description |
+|---|---|
+| [docs/DIAGRAMS.md](./docs/DIAGRAMS.md) | Mermaid sequence and flow diagrams for every core protocol operation |
+| [docs/ERROR_CATALOGUE.md](./docs/ERROR_CATALOGUE.md) | Complete error reference for Solidity and Soroban contracts, with frontend mapping |
+| [MarketAnalysis.md](./MarketAnalysis.md) | Competitive landscape, SWOT, and contributor positioning note |
+| [Roadmap.md](./Roadmap.md) | Phase-by-phase milestone plan |
+| [docs/stellar/ARCHITECTURE.md](./docs/stellar/ARCHITECTURE.md) | Stellar/Soroban contract architecture |
+
 ---
 
 ## 🔗 **About Ndi-Fi**
