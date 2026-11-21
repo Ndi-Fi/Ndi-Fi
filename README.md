@@ -196,3 +196,31 @@ graph TD
 
 ---
 
+## Stellar (Soroban)
+
+Ndi-Fi also has a Stellar implementation written in Rust for
+[Soroban](https://developers.stellar.org/docs/build/smart-contracts/overview).
+It lives in [`stellar/`](stellar/) and runs alongside the Solidity contracts,
+which are unchanged.
+
+- **NdiToken**: SEP-41 reward token (NDI) on OpenZeppelin Stellar Contracts.
+- **NdiLending**: vault over any SEP-41 asset (XLM or USDC). One owner-approved borrower pays a fixed APR, which raises the share price for depositors.
+- **NdiStaking**: stake an LP token, earn NDI, unstake after a cooldown, or emergency-withdraw anytime.
+
+Build and test:
+
+```bash
+cd stellar
+cargo test
+stellar contract build
+```
+
+Setup, deployment and design notes: [`stellar/README.md`](stellar/README.md),
+[`docs/stellar/ARCHITECTURE.md`](docs/stellar/ARCHITECTURE.md) and
+[`docs/stellar/MIGRATION.md`](docs/stellar/MIGRATION.md).
+
+This project takes part in the
+[Stellar Wave Program](https://www.drips.network/wave/stellar). See
+[`CONTRIBUTING.md`](CONTRIBUTING.md) before picking up an issue.
+
+> **Do not start work on an issue until a maintainer assigns it to you. Comment on the issue to express interest.**
