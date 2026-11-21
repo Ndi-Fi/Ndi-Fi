@@ -1,0 +1,64 @@
+name: Slither – Solidity Static Analysis
+
+on:
+  push:
+    paths:
+      - "src/**"
+      - "slither.config.json"
+      - ".github/workflows/slither.yml"
+  pull_request:
+    paths:
+      - "src/**"
+      - "slither.config.json"
+      - ".github/workflows/slither.yml"
+  schedule:
+    # Run weekly on Monday at 08:00 UTC to catch new findings
+    - cron: "0 8 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write  # needed to upload SARIF to the Security tab
+
+jobs:
+  slither:
+    name: slither analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: 1.2.3
+
+      # Build the project so Slither can resolve imports
+      - name: Build contracts
+        run: forge build
+
+      - name: Run Slither
+        uses: crytic/slither-action@v0.4.0
+        id: slither
+        with:
+          target: "src/"
+          slither-config: "slither.config.json"
+          sarif: results.sarif
+          # Fail only on new high/medium findings; informational and low
+          # are reported but do not break the build.
+          fail-on: high
+        continue-on-error: true  # always upload SARIF even on failure
+
+      - name: Upload SARIF to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: results.sarif
+
+      - name: Fail build if Slither found new high/medium issues
+        if: steps.slither.outcome == 'failure'
+        run: |
+          echo "Slither found high/medium severity issues. See the Security tab for details."
+          exit 1

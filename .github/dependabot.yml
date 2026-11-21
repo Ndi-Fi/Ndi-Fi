@@ -1,0 +1,65 @@
+version: 2
+
+updates:
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+      timezone: "UTC"
+    groups:
+      actions-minor:
+        update-types:
+          - "minor"
+          - "patch"
+    reviewers:
+      - "milah-247"
+    labels:
+      - "devops"
+      - "dependencies"
+
+  # Rust / Cargo (Stellar contracts)
+  - package-ecosystem: "cargo"
+    directory: "/stellar"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+      timezone: "UTC"
+    groups:
+      cargo-minor:
+        update-types:
+          - "minor"
+          - "patch"
+    reviewers:
+      - "milah-247"
+    labels:
+      - "devops"
+      - "dependencies"
+      - "Stellar Wave"
+
+  # npm (frontend, if present)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+      timezone: "UTC"
+    groups:
+      npm-minor:
+        update-types:
+          - "minor"
+          - "patch"
+    reviewers:
+      - "milah-247"
+    labels:
+      - "devops"
+      - "dependencies"
+    ignore:
+      # Suppress if no package.json exists yet — dependabot skips
+      # ecosystems that have no manifest, so this is a no-op until
+      # a frontend package.json is added.
+      []
