@@ -29,6 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+<<<<<<< Updated upstream
       # rustup reads stellar/rust-toolchain.toml (pinned toolchain + wasm32v1-none).
       - name: Install Rust toolchain
         run: |
@@ -37,12 +38,17 @@ jobs:
           cargo --version
 
       - name: Cache cargo
+=======
+      - name: Cache Cargo registry and target
+        id: cargo-cache
+>>>>>>> Stashed changes
         uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
             stellar/target
+<<<<<<< Updated upstream
           key: stellar-${{ runner.os }}-${{ hashFiles('stellar/Cargo.lock', 'stellar/rust-toolchain.toml') }}
           restore-keys: stellar-${{ runner.os }}-
 
@@ -53,6 +59,26 @@ jobs:
           mkdir -p "$HOME/.local/bin"
           tar -xzf /tmp/stellar-cli.tar.gz -C "$HOME/.local/bin" stellar
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+=======
+          key: ${{ runner.os }}-stellar-cargo-${{ hashFiles('stellar/rust-toolchain.toml') }}-${{ hashFiles('stellar/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-stellar-cargo-${{ hashFiles('stellar/rust-toolchain.toml') }}-
+            ${{ runner.os }}-stellar-cargo-
+
+      - name: Report Cargo cache result
+        run: |
+          if [ "${{ steps.cargo-cache.outputs.cache-hit }}" = "true" ]; then
+            echo "Cargo cache hit"
+          else
+            echo "Cargo cache miss (including partial restore)"
+          fi
+
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.99.1
+          targets: wasm32v1-none
+          components: rustfmt, clippy
+>>>>>>> Stashed changes
 
       - name: cargo fmt --check
         run: cargo fmt --all --check
@@ -62,12 +88,22 @@ jobs:
 
       - name: cargo test
         run: cargo test --locked
+<<<<<<< Updated upstream
+=======
+
+      - name: Install Stellar CLI
+        run: cargo install stellar-cli --version 22.0.0
+>>>>>>> Stashed changes
 
       - name: stellar contract build
         run: |
           stellar --version
           stellar contract build
+<<<<<<< Updated upstream
           for c in ndi_token ndi_lending ndi_staking; do
             test -f "target/wasm32v1-none/release/${c}.wasm"
             ls -l "target/wasm32v1-none/release/${c}.wasm"
           done
+=======
+          for c in ndi_token ndi_lending ndi_staking; do test -f "target/wasm32v1-none/release/${c}.wasm" && ls -l "target/wasm32v1-none/release/${c}.wasm"; done
+>>>>>>> Stashed changes
