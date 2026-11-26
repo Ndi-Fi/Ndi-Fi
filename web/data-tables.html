@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="ndi:version" content="unreleased" />
+    <meta name="ndi:network" content="testnet" />
+    <title>Ndi-Fi — positions &amp; history tables</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: #f5f8fd;
+        color: #132033;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+
+      main {
+        width: min(78rem, 100%);
+        margin-inline: auto;
+        padding: 2rem clamp(1rem, 4vw, 2.5rem) 4rem;
+      }
+
+      h1 {
+        margin: 0 0 0.5rem;
+      }
+
+      p {
+        color: #4a5b74;
+      }
+
+      .preview-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin: 1.5rem 0;
+      }
+
+      .preview-actions button {
+        min-height: 2.5rem;
+        padding: 0.5rem 0.875rem;
+        border: 1px solid #b8c7dc;
+        border-radius: 8px;
+        background: #fff;
+        color: inherit;
+        cursor: pointer;
+        font: inherit;
+        font-size: 0.875rem;
+      }
+
+      .preview-actions button:hover {
+        border-color: #0369a1;
+        color: #0369a1;
+      }
+
+      ndi-data-table {
+        margin-bottom: 2rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Positions &amp; history tables</h1>
+      <p>
+        Resize below 48rem to switch from semantic tables to card layouts. Both
+        views share the same sorting, filtering and pagination controls.
+      </p>
+      <p>
+        <a href="./index.html">← Shared footer preview</a>
+      </p>
+
+      <div class="preview-actions">
+        <button id="toggle-loading" type="button">Show loading state</button>
+        <button id="toggle-empty" type="button">Show empty state</button>
+      </div>
+
+      <ndi-data-table variant="positions"></ndi-data-table>
+      <ndi-data-table variant="history"></ndi-data-table>
+    </main>
+
+    <script type="module">
+      import './components/data-table/ndi-data-table.js';
+      import { TABLE_PRESETS } from './components/data-table/data-table-presets.js';
+
+      const tables = [...document.querySelectorAll('ndi-data-table')];
+      const loadingButton = document.querySelector('#toggle-loading');
+      const emptyButton = document.querySelector('#toggle-empty');
+      let showingEmpty = false;
+
+      loadingButton.addEventListener('click', () => {
+        const loading = !tables[0].hasAttribute('loading');
+        tables.forEach((table) => table.setLoading(loading));
+        loadingButton.textContent = loading ? 'Hide loading state' : 'Show loading state';
+      });
+
+      emptyButton.addEventListener('click', () => {
+        showingEmpty = !showingEmpty;
+        tables.forEach((table) => {
+          const preset = TABLE_PRESETS[table.getAttribute('variant')];
+          table.setRows(showingEmpty ? [] : preset.rows);
+        });
+        emptyButton.textContent = showingEmpty ? 'Restore rows' : 'Show empty state';
+      });
+    </script>
+  </body>
+</html>

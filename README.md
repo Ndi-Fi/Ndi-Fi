@@ -64,6 +64,9 @@ Ndi-Fi/
 ├── frontend/                          # Accessible, localized DeFi help UI
 │   ├── src/                           # Tooltip/inline-help components + locales
 │   └── test/                          # Dependency-free component/content tests
+├── web/                               # Framework-agnostic shared UI pieces
+│   ├── components/footer/             # Shared footer component + config
+│   └── components/data-table/         # Responsive positions/history tables
 ├── test/                              # Test suites (Foundry)
 │   ├── NdiLending.t.sol             # Lending tests
 │   ├── NdiStaking.t.sol             # Staking tests
