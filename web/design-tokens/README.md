@@ -88,11 +88,11 @@ automatic and manual theming.
 | `secondary` | `#475569` | `#cbd5e1` | Secondary actions |
 | `secondary-contrast` / `-soft` | … | … | Secondary text/background |
 | `danger` (+ `-contrast`, `-soft`) | `#dc2626` | `#f87171` | Destructive actions |
-| `success` (+ `-contrast`, `-soft`) | `#16a34a` | `#4ade80` | Positive states |
-| `warning` (+ `-contrast`, `-soft`) | `#d97706` | `#fbbf24` | Caution |
-| `info` (+ `-contrast`, `-soft`) | `#0284c7` | `#38bdf8` | Information |
+| `success` (+ `-contrast`, `-soft`) | `#15803d` | `#4ade80` | Positive states |
+| `warning` (+ `-contrast`, `-soft`) | `#b45309` | `#fbbf24` | Caution |
+| `info` (+ `-contrast`, `-soft`) | `#0369a1` | `#38bdf8` | Information |
 | `accent` | `#3457d5` | `#9db4ff` | Highlights, links |
-| `focus-ring` | `rgba(52,87,213,.5)` | `rgba(157,180,255,.55)` | Focus outlines |
+| `focus-ring` | `rgba(52,87,213,.8)` | `rgba(157,180,255,.55)` | Focus outlines |
 
 Each semantic colour is available as `--ndi-color-<name>` and (for Tailwind)
 `bg-<name>`, `text-<name>`, `border-<name>`, etc.
@@ -120,6 +120,15 @@ elevation still reads on a dark background.
 | Font size | `--ndi-text-xs` … `--ndi-text-3xl` |
 | Font weight | `--ndi-weight-normal`/`medium`/`semibold`/`bold` |
 | Line height | `--ndi-leading-tight`/`normal`/`relaxed` |
+
+## Contrast (WCAG AA)
+
+`contrast.js` lists every foreground/background pair the components render
+and `contrast.test.js` fails if any of them drops below WCAG AA (4.5:1 text,
+3:1 graphics) in either theme. Add a pair there whenever you introduce a new
+combination. Print the audit with `node design-tokens/contrast.js [--md]`;
+see [`docs/design/05-dark-mode.md`](../../docs/design/05-dark-mode.md) for the
+results and the no-flash theme setup (`web/theme/theme.js`).
 
 ## Keeping the source in sync
 

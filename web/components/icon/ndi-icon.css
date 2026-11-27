@@ -1,0 +1,29 @@
+/**
+ * <ndi-icon> host styles.
+ *
+ * The host is display:inline-flex so it lines up naturally inside buttons and
+ * other flex parents without introducing block-level line breaks.
+ *
+ * line-height:0 collapses the extra leading that browsers add to inline boxes,
+ * preventing icons from pushing rows taller than they should be.
+ *
+ * color is not set here — it deliberately inherits from the nearest ancestor
+ * so the icon always follows the surrounding text color and responds to themes.
+ */
+
+:host {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+  flex-shrink: 0;
+  /* Inherit the surrounding text color so icons respond to light/dark themes
+     and component variant color overrides without any extra CSS. */
+  color: inherit;
+}
+
+/* The SVG itself should never overflow the host box. */
+:host svg {
+  display: block;
+  overflow: visible; /* allow drop shadows / focus rings to show outside bounds */
+}
