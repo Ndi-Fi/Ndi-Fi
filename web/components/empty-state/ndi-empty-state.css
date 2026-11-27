@@ -1,0 +1,195 @@
+/*
+ * Ndi-Fi empty-state component styles.
+ *
+ * Usage: import this sheet alongside ndi-empty-state.js, or include it in
+ * your page's stylesheet.  All tokens fall back to the existing --ndi-* set
+ * so the component inherits the app's colour scheme without extra config.
+ */
+
+/* ── Token layer ─────────────────────────────────────────────────────────── */
+
+:root {
+  /* Override any of these on a page or container to customise the state. */
+  --ndi-es-bg:          transparent;
+  --ndi-es-border:      var(--ndi-help-border, #d8dee9);
+  --ndi-es-radius:      var(--ndi-help-radius, 10px);
+  --ndi-es-fg:          var(--ndi-help-fg, #1b2230);
+  --ndi-es-muted:       var(--ndi-help-muted, #4c566a);
+  --ndi-es-accent:      var(--ndi-help-accent, #3457d5);
+  --ndi-es-accent-soft: var(--ndi-help-accent-soft, #eef2ff);
+  --ndi-es-icon-size:   3.5rem;
+  --ndi-es-icon-color:  var(--ndi-es-muted);
+  --ndi-es-gap:         0.75rem;
+  --ndi-es-padding:     clamp(2rem, 6vw, 3.5rem) clamp(1.25rem, 4vw, 2.5rem);
+  --ndi-es-cta-padding: 0.6rem 1.4rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ndi-es-bg:          transparent;
+    --ndi-es-border:      var(--ndi-help-border, #3a465c);
+    --ndi-es-fg:          var(--ndi-help-fg, #f1f5f9);
+    --ndi-es-muted:       var(--ndi-help-muted, #b8c2d4);
+    --ndi-es-accent:      var(--ndi-help-accent, #9db4ff);
+    --ndi-es-accent-soft: var(--ndi-help-accent-soft, #1e2a49);
+  }
+}
+
+/* ── Host element ────────────────────────────────────────────────────────── */
+
+ndi-empty-state {
+  display: block;
+}
+
+/* ── Layout ──────────────────────────────────────────────────────────────── */
+
+.ndi-es {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ndi-es-gap);
+  padding: var(--ndi-es-padding);
+  text-align: center;
+  background: var(--ndi-es-bg);
+  border-radius: var(--ndi-es-radius);
+  color: var(--ndi-es-fg);
+  font-family: inherit;
+}
+
+.ndi-es--bordered {
+  border: 1px dashed var(--ndi-es-border);
+}
+
+/* ── Illustration / icon ─────────────────────────────────────────────────── */
+
+.ndi-es__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--ndi-es-icon-size);
+  height: var(--ndi-es-icon-size);
+  border-radius: 50%;
+  background: var(--ndi-es-accent-soft);
+  color: var(--ndi-es-icon-color);
+  font-size: calc(var(--ndi-es-icon-size) * 0.5);
+  line-height: 1;
+  /* Allow the slotted illustration to fill naturally. */
+  overflow: hidden;
+}
+
+.ndi-es__icon svg {
+  width: calc(var(--ndi-es-icon-size) * 0.55);
+  height: calc(var(--ndi-es-icon-size) * 0.55);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ── Text ────────────────────────────────────────────────────────────────── */
+
+.ndi-es__title {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--ndi-es-fg);
+}
+
+.ndi-es__body {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--ndi-es-muted);
+  max-width: 36ch;
+}
+
+/* ── Action row ──────────────────────────────────────────────────────────── */
+
+.ndi-es__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  justify-content: center;
+  margin-top: 0.25rem;
+}
+
+/*
+ * Primary CTA.  Apply .ndi-es__cta--primary (default from the component) for
+ * the filled, accent-coloured variant; .ndi-es__cta--secondary for the
+ * outlined variant.
+ */
+.ndi-es__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: var(--ndi-es-cta-padding);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+  /* White-label: callers set the border and background directly. */
+  border: 1px solid transparent;
+}
+
+.ndi-es__cta:focus-visible {
+  outline: 3px solid var(--ndi-es-accent);
+  outline-offset: 2px;
+}
+
+.ndi-es__cta--primary {
+  background: var(--ndi-es-accent);
+  border-color: var(--ndi-es-accent);
+  color: #fff;
+}
+
+.ndi-es__cta--primary:hover {
+  filter: brightness(1.1);
+}
+
+.ndi-es__cta--secondary {
+  background: transparent;
+  border-color: var(--ndi-es-accent);
+  color: var(--ndi-es-accent);
+}
+
+.ndi-es__cta--secondary:hover {
+  background: var(--ndi-es-accent-soft);
+}
+
+/* ── Reduced-motion ──────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .ndi-es__cta {
+    transition: none;
+  }
+}
+
+/* ── Forced colours ──────────────────────────────────────────────────────── */
+
+@media (forced-colors: active) {
+  .ndi-es__cta--primary {
+    background: ButtonText;
+    border-color: ButtonText;
+    color: ButtonFace;
+    forced-color-adjust: none;
+  }
+
+  .ndi-es__cta--secondary {
+    border-color: ButtonText;
+    color: ButtonText;
+    forced-color-adjust: none;
+  }
+
+  .ndi-es__icon {
+    background: Canvas;
+    color: ButtonText;
+    border: 1px solid ButtonText;
+  }
+}

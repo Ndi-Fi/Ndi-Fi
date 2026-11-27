@@ -195,7 +195,9 @@ These are observations only; nothing in `src/` was changed.
 
 The MVP has no price oracle. To port `NdiFiLending` (collateralised loans,
 health factor, liquidation), the planned source is **Reflector**, a SEP-40
-price oracle on Stellar. The design is tracked in `WAVE_ISSUES.md`.
+price oracle on Stellar. The design is tracked in `WAVE_ISSUES.md`. The
+Ethereum-side oracle configuration, its known gaps and the target hardening
+parameters are documented in [`ORACLE.md`](ORACLE.md).
 
 ## 6. Open questions for maintainers
 
@@ -204,3 +206,62 @@ price oracle on Stellar. The design is tracked in `WAVE_ISSUES.md`.
 - Should `ndi_lending` support several borrowers, or should the future collateral contract be the single borrower?
 - Is 100% APR the right upper bound for `set_interest_rate` and the staking `reward_rate`?
 - Who should own the contracts on mainnet (multisig account)?
+
+## 7. Migration approach summary
+
+This section summarises the key strategic decisions made when porting Ndi-Fi
+from Ethereum/Solidity to Stellar/Soroban, so contributors and reviewers can
+understand the "why" behind each design choice.
+
+### Why Soroban instead of EVM-compatible Stellar?
+
+Stellar's Soroban smart contract platform (the native Stellar VM) was chosen
+over EVM-compatible alternatives because:
+
+- **First-class SEP-41 support.** Soroban's standard token interface (SEP-41)
+  maps cleanly to both XLM (via the Stellar Asset Contract) and USDC. The
+  `FungibleVault` from OpenZeppelin Stellar Contracts provides an ERC-4626
+  equivalent with the same accounting guarantees.
+- **Rust toolchain.** Rust's ownership model, `overflow-checks = true`, and
+  `checked_*` arithmetic eliminate whole classes of bugs present in the Solidity
+  version (see §4).
+- **No re-entrancy.** Soroban forbids cross-contract re-entrancy at the runtime
+  level, removing the need for `nonReentrant` guards.
+- **In-place upgrades.** Soroban's `upgrade(wasm_hash)` replaces WASM without
+  changing the contract address or clearing storage, making upgrades simpler
+  than proxy patterns.
+
+### Scope decisions
+
+| Decision | Rationale |
+|---|---|
+| `NdiFiLending` not ported | Requires price oracles. The Reflector oracle (SEP-40) is planned but out of scope for the MVP. |
+| `NdiFiVault` merged into `ndi_lending` | The vault's only purpose on Ethereum is to hold liquidity for the lending contract. On Stellar, `ndi_lending` is the vault, and the lending contract becomes a single approved borrower. |
+| LP-token staking instead of single-asset | Avoids the critical shared-shares bug (§4 item 19) and positions staking for Soroswap integration. |
+| One owner instead of roles | Keeps the MVP auditable. AccessControl can be re-introduced via `stellar-access` when needed. |
+
+### Data type migration
+
+All `uint256` amounts become `i128`. This is the SEP-41 standard type and
+supports the full range of practical DeFi values at 7 decimals (maximum
+`i128` ≈ 1.7 × 10²⁶ stroops ≈ 1.7 × 10¹⁹ tokens). Negative values are
+rejected at the contract boundary (`amount <= 0` checks).
+
+Rates (APR, `reward_rate`) are scaled by `1e7`: a value of `1_000_000`
+represents 10% per year. The maximum enforced rate is `10_000_000` (100% APR).
+
+### Interest model migration
+
+The Solidity `NdiFiVault` has no interest model: `withdrawForLoan` reduces
+`totalAssets`, so depositors bear the full cost of loans. `ndi_lending` fixes
+this by tracking outstanding debt separately and including it in `total_assets`,
+so the share price reflects the true value of depositors' claims. Interest
+capitalises into the debt whenever the debt is touched.
+
+### Oracle migration path
+
+The Solidity lending contract uses Chainlink with known bugs (§4 items 10–11).
+The Stellar port defers oracle integration to a dedicated design phase
+(see `WAVE_ISSUES.md` issue 13 and `docs/stellar/ORACLE_DESIGN.md` when
+created). The planned oracle is **Reflector** (SEP-40), which provides
+asset-price feeds natively on Stellar.

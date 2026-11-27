@@ -10,7 +10,12 @@ import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.so
 import {AggregatorV3Interface} from
     "lib/chainlink-brownie-contracts/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
+/// @title NdiFiLending
+/// @notice Collateralized lending market backed by liquidity in `NdiFiVault`.
+/// @dev Loan terms and collateral parameters are configured by the owner via `initialize` and the setter functions.
 contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
+    /// @notice Loan record for a borrower.
+    /// @dev `collateralAmount` is the token amount locked for this loan, not a USD value.
     struct Loan {
         uint256 principal; // Original borrowed amount
         uint256 originationFee; // One-time origination fee
@@ -19,44 +24,102 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         bool isActive; // Loan status
     }
 
+    /// @notice Supported collateral token and the price feed used to value it.
     struct CollateralToken {
         address tokenAddress;
         AggregatorV3Interface priceFeed;
     }
 
+    /// @notice Configuration for a supported collateral token, including its Chainlink price feed.
     mapping(address => CollateralToken) public supportedCollateralTokens;
+
+    /// @notice List of collateral tokens currently accepted by the market.
     address[] public supportedCollateralTokenAddresses;
 
+    /// @notice ERC-20 token lent to borrowers.
     IERC20 public immutable lendingToken;
+
+    /// @notice Vault that supplies loan liquidity.
     NdiFiVault public immutable vault;
     AggregatorV3Interface internal lendingTokenPriceFeed;
 
-    uint256 public collateralFactor; // Percentage (e.g., 75 = 75%)
-    uint256 public liquidationThreshold; // Threshold for liquidation (e.g., 85%)
-    uint256 public originationFeeRate; // One-time origination fee rate in basis points (charged at loan origination)
-    uint256 public liquidationPenalty; // Liquidation penalty in basis points
+    /// @notice Maximum loan-to-value percentage, e.g. 75 means 75%.
+    uint256 public collateralFactor;
 
+    /// @notice Collateral value percentage at which a loan becomes liquidatable, e.g. 85 means 85%.
+    uint256 public liquidationThreshold;
+
+    /// @notice One-time origination fee rate in basis points, charged when a loan is taken.
+    uint256 public originationFeeRate;
+
+    /// @notice Liquidation penalty in basis points applied to repaid debt value.
+    uint256 public liquidationPenalty;
+
+    /// @notice Number of seconds in a year, used by interest and reward calculations.
     uint256 public constant SECONDS_PER_YEAR = 365 * 24 * 60 * 60;
+
+    /// @notice Basis point divisor (10,000).
     uint256 public constant BASIS_POINTS = 10000;
 
+    /// @notice Unlocked collateral balances by account and token.
     mapping(address => mapping(address => uint256)) public collateralBalances;
+
+    /// @notice Collateral locked against active loans by account and token.
     mapping(address => mapping(address => uint256)) public lockedCollateral;
+
+    /// @notice Active and historical loan records by borrower.
     mapping(address => Loan) public loans;
 
+    /// @notice Total collateral deposited across all accounts.
     uint256 public totalCollateral;
+
+    /// @notice Total principal currently borrowed across all loans.
     uint256 public totalBorrowed;
 
     // Initialization tracking
     bool private initialized;
 
+    /// @notice Emitted when a user deposits collateral.
+    /// @param user Account that deposited the collateral.
+    /// @param amount Amount of collateral deposited.
     event CollateralDeposited(address indexed user, uint256 amount);
+
+    /// @notice Emitted when a user withdraws unlocked collateral.
+    /// @param user Account that withdrew the collateral.
+    /// @param amount Amount of collateral withdrawn.
     event CollateralWithdrawn(address indexed user, uint256 amount);
+
+    /// @notice Emitted when a borrower takes a new loan.
+    /// @param user Borrower receiving the loan.
+    /// @param principal Principal amount borrowed.
+    /// @param collateralLocked Amount of collateral locked for the loan.
     event LoanTaken(address indexed user, uint256 principal, uint256 collateralLocked);
+
+    /// @notice Emitted when a borrower repays an active loan in full.
+    /// @param user Borrower repaying the loan.
+    /// @param amount Total amount repaid, including the origination fee.
+    /// @param originationFee Origination fee included in the repayment.
     event LoanRepaid(address indexed user, uint256 amount, uint256 originationFee);
+
+    /// @notice Emitted when an undercollateralized loan is liquidated.
+    /// @param borrower Borrower whose loan was liquidated.
+    /// @param liquidator Account that repaid the debt and seized collateral.
+    /// @param collateralSeized Value of collateral seized, price-denominated.
+    /// @param debtRepaid Amount of debt repaid by the liquidator.
     event LoanLiquidated(
         address indexed borrower, address indexed liquidator, uint256 collateralSeized, uint256 debtRepaid
     );
+
+    /// @notice Emitted when the origination fee rate is updated.
+    /// @param oldRate Previous origination fee rate in basis points.
+    /// @param newRate New origination fee rate in basis points.
     event OriginationFeeRateUpdated(uint256 oldRate, uint256 newRate);
+
+    /// @notice Emitted once when the market parameters are initialized.
+    /// @param collateralFactor Initial loan-to-value percentage.
+    /// @param liquidationThreshold Initial liquidation threshold percentage.
+    /// @param originationFeeRate Initial origination fee rate in basis points.
+    /// @param penalty Initial liquidation penalty in basis points.
     event ContractInitialized(
         uint256 collateralFactor, uint256 liquidationThreshold, uint256 originationFeeRate, uint256 penalty
     );
@@ -71,6 +134,10 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         _;
     }
 
+    /// @notice Deploys the lending market.
+    /// @param _lendingToken ERC-20 token lent to borrowers.
+    /// @param _vault Vault that holds the available liquidity.
+    /// @param _lendingTokenPriceFeed Chainlink price feed for the lending token.
     constructor(IERC20 _lendingToken, NdiFiVault _vault, AggregatorV3Interface _lendingTokenPriceFeed)
         Ownable(msg.sender)
     {
@@ -82,6 +149,10 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         lendingTokenPriceFeed = _lendingTokenPriceFeed;
     }
 
+    /// @notice Adds a collateral token and its Chainlink price feed.
+    /// @dev Only callable by the owner. The token must not already be supported.
+    /// @param _tokenAddress Address of the collateral ERC-20 token.
+    /// @param _priceFeedAddress Address of the token's Chainlink price feed.
     function addCollateralToken(address _tokenAddress, address _priceFeedAddress) external onlyOwner {
         require(_tokenAddress != address(0), "Invalid token address");
         require(_priceFeedAddress != address(0), "Invalid price feed address");
@@ -92,6 +163,9 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         supportedCollateralTokenAddresses.push(_tokenAddress);
     }
 
+    /// @notice Removes a collateral token from the supported set.
+    /// @dev Only callable by the owner.
+    /// @param _tokenAddress Address of the collateral token to remove.
     function removeCollateralToken(address _tokenAddress) external onlyOwner {
         require(supportedCollateralTokens[_tokenAddress].tokenAddress != address(0), "Token not supported");
 
@@ -107,6 +181,12 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         }
     }
 
+    /// @notice Sets the initial market parameters and marks the contract initialized.
+    /// @dev Only callable by the owner and only once. Emits `ContractInitialized`.
+    /// @param _collateralFactor Loan-to-value percentage (1-100).
+    /// @param _liquidationThreshold Liquidation threshold percentage, greater than `_collateralFactor`.
+    /// @param _originationFeeRate One-time origination fee rate in basis points (max 10%).
+    /// @param _liquidationPenalty Liquidation penalty in basis points (max 20%).
     function initialize(
         uint256 _collateralFactor,
         uint256 _liquidationThreshold,
@@ -131,17 +211,26 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         emit ContractInitialized(_collateralFactor, _liquidationThreshold, _originationFeeRate, _liquidationPenalty);
     }
 
+    /// @notice Updates the maximum loan-to-value percentage.
+    /// @dev Only callable by the owner after initialization; must remain below the liquidation threshold.
+    /// @param _newFactor New loan-to-value percentage (1-100).
     function setCollateralFactor(uint256 _newFactor) external onlyOwner onlyInitialized {
         require(_newFactor <= 100 && _newFactor > 0, "Invalid collateral factor");
         require(_newFactor < liquidationThreshold, "Must be less than liquidation threshold");
         collateralFactor = _newFactor;
     }
 
+    /// @notice Updates the collateral value percentage at which loans become liquidatable.
+    /// @dev Only callable by the owner after initialization; must be greater than the collateral factor.
+    /// @param _newThreshold New liquidation threshold percentage.
     function setLiquidationThreshold(uint256 _newThreshold) external onlyOwner onlyInitialized {
         require(_newThreshold <= 100 && _newThreshold > collateralFactor, "Invalid liquidation threshold");
         liquidationThreshold = _newThreshold;
     }
 
+    /// @notice Updates the one-time origination fee rate.
+    /// @dev Only callable by the owner after initialization; emits `OriginationFeeRateUpdated`.
+    /// @param _newRate New origination fee rate in basis points (max 1,000).
     function setOriginationFeeRate(uint256 _newRate) external onlyOwner onlyInitialized {
         require(_newRate <= 1000, "Origination fee too high");
         uint256 oldRate = originationFeeRate;
@@ -149,19 +238,30 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         emit OriginationFeeRateUpdated(oldRate, _newRate);
     }
 
+    /// @notice Updates the penalty applied when a loan is liquidated.
+    /// @dev Only callable by the owner after initialization.
+    /// @param _newPenalty New liquidation penalty in basis points (max 2,000).
     function setLiquidationPenalty(uint256 _newPenalty) external onlyOwner onlyInitialized {
         require(_newPenalty <= 2000, "Liquidation penalty too high");
         liquidationPenalty = _newPenalty;
     }
 
+    /// @notice Pauses deposits, withdrawals, borrowing, repayments and liquidations.
+    /// @dev Only callable by the owner.
     function pause() external onlyOwner {
         _pause();
     }
 
+    /// @notice Resumes all paused market operations.
+    /// @dev Only callable by the owner.
     function unpause() external onlyOwner {
         _unpause();
     }
 
+    /// @notice Deposits a supported collateral token on behalf of the caller.
+    /// @dev Requires prior ERC-20 approval to this contract and an initialized, unpaused market.
+    /// @param _tokenAddress Address of the supported collateral token.
+    /// @param _amount Amount of collateral to deposit.
     function depositCollateral(address _tokenAddress, uint256 _amount)
         external
         whenNotPaused
@@ -179,6 +279,10 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         emit CollateralDeposited(msg.sender, _amount);
     }
 
+    /// @notice Withdraws collateral that is not locked against an active loan.
+    /// @dev Reverts if the requested amount exceeds the unlocked balance.
+    /// @param _tokenAddress Address of the collateral token.
+    /// @param _amount Amount of collateral to withdraw.
     function withdrawCollateral(address _tokenAddress, uint256 _amount)
         external
         whenNotPaused
@@ -200,6 +304,9 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         emit CollateralWithdrawn(msg.sender, _amount);
     }
 
+    /// @notice Calculates the price-denominated value of all collateral deposited by an account.
+    /// @param _user Account whose collateral is valued.
+    /// @return Total collateral value across every supported token.
     function getCollateralValue(address _user) public view returns (uint256) {
         uint256 totalCollateralValue = 0;
         for (uint256 i = 0; i < supportedCollateralTokenAddresses.length; i++) {
@@ -214,6 +321,9 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         return totalCollateralValue;
     }
 
+    /// @notice Borrows lending tokens against the caller's collateral.
+    /// @dev The caller may have at most one active loan; the net proceeds are sent from the vault.
+    /// @param _amount Principal amount to borrow, including the origination fee.
     function takeLoan(uint256 _amount) external whenNotPaused nonReentrant onlyInitialized {
         require(getCollateralValue(msg.sender) > 0, "No collateral deposited");
         require(_amount > 0, "Amount must be greater than zero");
@@ -287,6 +397,9 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         emit LoanTaken(msg.sender, _amount, totalLockedCollateral);
     }
 
+    /// @notice Repays an active loan in full and unlocks the borrower's collateral.
+    /// @dev Requires ERC-20 approval for the total debt (principal plus origination fee).
+    /// @param _amount Full debt amount to repay.
     function repayLoan(uint256 _amount) external whenNotPaused nonReentrant onlyInitialized {
         Loan storage userLoan = loans[msg.sender];
         require(userLoan.isActive, "No active loan");
@@ -313,6 +426,9 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         userLoan.originationFee = 0;
     }
 
+    /// @notice Liquidates an undercollateralized loan and seizes the borrower's collateral.
+    /// @dev Only callable by the owner; the liquidator must repay the outstanding debt first.
+    /// @param _borrower Address of the borrower whose loan is liquidated.
     function liquidateLoan(address _borrower) external onlyLiquidator nonReentrant onlyInitialized {
         Loan storage loan = loans[_borrower];
         require(loan.isActive, "No active loan");
@@ -396,10 +512,12 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         // Price is returned with 8 decimals, so we convert it to 18 decimals
         return uint256(price) * 1e10;
     }
-    /// @dev Seize collateral of a single token up to `remainingValueToSeize`.
-    /// @return seizedValueAdded value (price-denominated) that was seized
-    /// @return amountSeized token units that were removed/transferred
-
+    /// @dev Seizes collateral of a single token up to `remainingValueToSeize`.
+    /// @param borrower Borrower whose collateral is seized.
+    /// @param tokenAddress Address of the collateral token.
+    /// @param remainingValueToSeize Remaining debt value to cover.
+    /// @return seizedValueAdded Value (price-denominated) that was seized.
+    /// @return amountSeized Token units that were removed or transferred.
     function _seizeFromToken(address borrower, address tokenAddress, uint256 remainingValueToSeize)
         internal
         returns (uint256 seizedValueAdded, uint256 amountSeized)
@@ -437,6 +555,9 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         seizedValueAdded = (amountSeized * tokenPrice) / (10 ** collateralDecimals);
     }
 
+    /// @notice Returns the price-denominated value of a borrower's active principal.
+    /// @param _user Borrower to query.
+    /// @return Value of the outstanding principal, or zero when no loan is active.
     function getLoanValue(address _user) public view returns (uint256) {
         Loan memory loan = loans[_user];
         if (!loan.isActive) {
@@ -448,6 +569,10 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         return (loanAmount * tokenPrice) / (10 ** lendingDecimals);
     }
 
+    /// @notice Calculates the health factor of a borrower's loan.
+    /// @dev A value below 100 means the loan is liquidatable; accounts without a loan return the maximum value.
+    /// @param _borrower Borrower to query.
+    /// @return Health factor scaled by 100.
     function calculateHealthFactor(address _borrower) public view returns (uint256) {
         if (!initialized) return type(uint256).max;
 
@@ -463,6 +588,14 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         return (liquidationValue * 100) / totalDebtValue;
     }
 
+    /// @notice Returns the full loan record and health information for an account.
+    /// @param _user Borrower to query.
+    /// @return principal Outstanding principal.
+    /// @return originationFee Origination fee charged when the loan was taken.
+    /// @return totalDebt Principal plus origination fee.
+    /// @return collateralAmount Collateral locked for the loan.
+    /// @return healthFactor Health factor scaled by 100, or the maximum value when no loan is active.
+    /// @return isActive Whether the account currently has an active loan.
     function getLoanDetails(address _user)
         external
         view
@@ -493,6 +626,11 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         );
     }
 
+    /// @notice Returns aggregate market statistics.
+    /// @return totalCollateralAmount Total collateral deposited across all accounts.
+    /// @return totalBorrowedAmount Total principal currently borrowed.
+    /// @return availableLiquidity Lending token balance available in the vault.
+    /// @return utilizationRate Percentage of liquidity currently borrowed, scaled by 100.
     function getContractStats()
         external
         view
@@ -509,10 +647,16 @@ contract NdiFiLending is Ownable, ReentrancyGuard, Pausable {
         return (totalCollateral, totalBorrowed, liquidity, utilization);
     }
 
+    /// @notice Reports whether the market parameters have been initialized.
+    /// @return True once `initialize` has been called.
     function isInitialized() external view returns (bool) {
         return initialized;
     }
 
+    /// @notice Transfers tokens accidentally sent to this contract to the owner.
+    /// @dev Only callable by the owner.
+    /// @param _token Address of the ERC-20 token to recover.
+    /// @param _amount Amount of tokens to transfer.
     function emergencyWithdraw(IERC20 _token, uint256 _amount) external onlyOwner {
         require(_token.transfer(owner(), _amount), "Emergency withdrawal failed");
     }

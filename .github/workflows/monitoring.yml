@@ -1,0 +1,58 @@
+name: Deployment Monitoring
+
+# This workflow fires after a deployment workflow completes, or can be
+# triggered manually to test alerting.
+on:
+  workflow_run:
+    workflows: ["Stellar (Soroban)"]
+    types:
+      - completed
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  alert-on-failure:
+    name: Alert on deploy failure
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'failure'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Open failure issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `🚨 Deploy failure: ${context.workflow} run #${context.runNumber}`;
+            const body = [
+              `**Workflow:** ${context.workflow}`,
+              `**Run:** [${context.runNumber}](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`,
+              `**Branch:** ${context.ref}`,
+              `**Triggered by:** ${context.actor}`,
+              '',
+              '## Key metrics to check',
+              '| Metric | Description | Threshold |',
+              '|--------|-------------|-----------|',
+              '| TVL    | Total value locked across vaults | Monitor for sudden drops > 10 % |',
+              '| Errors | Contract error events (ContractError topics) | > 5 / min → page on-call |',
+              '| Latency | RPC call round-trip time | p99 > 2 s → investigate |',
+              '',
+              '## Runbook',
+              'See [docs/stellar/MIGRATION.md](../blob/main/docs/stellar/MIGRATION.md) for rollback steps.',
+              '',
+              '## Privacy and cost',
+              'No user PII is collected. Metric data is stored for 30 days.',
+              'Horizon API calls are free; keep polling interval ≥ 60 s to stay within rate limits.',
+            ].join('\n');
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              labels: ['monitoring', 'deploy-failure'],
+            });

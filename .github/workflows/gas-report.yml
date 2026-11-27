@@ -1,0 +1,166 @@
+name: Gas Report
+
+# Runs forge test --gas-report on every PR, compares to the base branch,
+# comments the delta on the PR, and fails if any function regresses beyond
+# the threshold defined in GAS_THRESHOLD_PCT.
+#
+# How to read the report:
+#   The PR comment shows a table with columns:
+#     Contract | Function | Base (gas) | PR (gas) | Delta | Change %
+#   Green rows are improvements; red rows are regressions.
+#   The workflow fails when *any* function increases by more than
+#   GAS_THRESHOLD_PCT percent.  Adjust the value below to suit the project.
+
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - "test/**"
+      - "script/**"
+      - "foundry.toml"
+      - ".github/workflows/gas-report.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write   # needed to post the comment
+
+env:
+  FOUNDRY_PROFILE: ci
+  # Maximum allowed gas increase per function (percent).  Set to 0 to allow
+  # no regressions at all; set higher to allow intentional increases.
+  GAS_THRESHOLD_PCT: "5"
+
+jobs:
+  gas-report:
+    name: Gas regression check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0   # full history needed to check out base branch
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: 1.2.3
+
+      # ── Run gas report on the PR branch ────────────────────────────────────
+      - name: Gas report (PR branch)
+        run: forge test --gas-report 2>&1 | tee /tmp/gas-pr.txt
+
+      # ── Run gas report on the base branch ──────────────────────────────────
+      - name: Check out base branch
+        run: git checkout "${{ github.base_ref }}"
+
+      - name: Gas report (base branch)
+        run: forge test --gas-report 2>&1 | tee /tmp/gas-base.txt
+
+      # ── Compare and produce a delta table ──────────────────────────────────
+      - name: Compare gas reports
+        id: compare
+        run: |
+          python3 - <<'EOF'
+          import re, sys, os
+
+          THRESHOLD = float(os.environ.get("GAS_THRESHOLD_PCT", "5"))
+
+          def parse_gas(path):
+              """Return {(contract, fn): avg_gas} from a forge --gas-report output."""
+              results = {}
+              contract = None
+              with open(path) as f:
+                  for line in f:
+                      m = re.match(r'\|\s*(\S+)\s*\|', line)
+                      if m:
+                          # Header rows contain "Contract" or "Function"
+                          token = m.group(1)
+                          if token in ("Contract", "Function", "Deployment", ""):
+                              continue
+                          # Lines like "| ContractName  | ..."  mark contract blocks
+                          cols = [c.strip() for c in line.strip().strip("|").split("|")]
+                          if len(cols) >= 5:
+                              fn = cols[0]
+                              avg = cols[3]  # column index 3 = Avg
+                              if avg.isdigit() and contract:
+                                  results[(contract, fn)] = int(avg)
+                          elif len(cols) == 1 and cols[0]:
+                              contract = cols[0]
+              return results
+
+          base = parse_gas("/tmp/gas-base.txt")
+          pr   = parse_gas("/tmp/gas-pr.txt")
+
+          all_keys = sorted(set(base) | set(pr))
+          rows = []
+          failed = False
+
+          for key in all_keys:
+              contract, fn = key
+              b = base.get(key)
+              p = pr.get(key)
+              if b is None or p is None:
+                  delta_str = "N/A (new/removed)"
+                  pct_str   = ""
+                  flag      = "🆕" if b is None else "🗑️"
+              else:
+                  delta = p - b
+                  pct   = (delta / b * 100) if b else 0
+                  delta_str = f"{delta:+,}"
+                  pct_str   = f"{pct:+.1f}%"
+                  if delta > 0 and pct > THRESHOLD:
+                      flag   = "🔴"
+                      failed = True
+                  elif delta > 0:
+                      flag = "🟡"
+                  elif delta < 0:
+                      flag = "🟢"
+                  else:
+                      flag = "⚪"
+              rows.append((flag, contract, fn,
+                           f"{b:,}" if b else "—",
+                           f"{p:,}" if p else "—",
+                           delta_str, pct_str))
+
+          header = "| | Contract | Function | Base (gas) | PR (gas) | Delta | Change % |\n"
+          sep    = "|---|---|---|---|---|---|---|\n"
+          body   = "".join(
+              f"| {r[0]} | {r[1]} | {r[2]} | {r[3]} | {r[4]} | {r[5]} | {r[6]} |\n"
+              for r in rows
+          )
+
+          threshold_note = (
+              f"\n> ⚙️ Failure threshold: **{THRESHOLD}%** per function "
+              f"(set via `GAS_THRESHOLD_PCT` in the workflow)."
+          )
+          summary = "\n> ✅ No gas regressions above the threshold." if not failed else \
+                    "\n> ❌ One or more functions regressed beyond the threshold."
+
+          comment = (
+              "## ⛽ Gas Report\n\n"
+              + header + sep + body
+              + threshold_note + summary + "\n"
+          )
+
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as f:
+              f.write(comment)
+
+          with open("/tmp/gas-comment.md", "w") as f:
+              f.write(comment)
+
+          if failed:
+              print("::error::Gas regression detected. See the step summary for details.")
+              sys.exit(1)
+          EOF
+        env:
+          GAS_THRESHOLD_PCT: ${{ env.GAS_THRESHOLD_PCT }}
+
+      # ── Post comment on the PR ──────────────────────────────────────────────
+      - name: Post gas report comment
+        if: always() && github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: gas-report
+          path: /tmp/gas-comment.md
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

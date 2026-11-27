@@ -1,0 +1,231 @@
+name: Stale Environments
+
+# Tracks active preview deployments per branch and tears them down on branch
+# deletion or when a PR is closed. Also alerts on orphaned environments via a
+# scheduled scan.
+#
+# Environment lifecycle:
+#   open PR   → preview environment created (by storybook.yml or other deploy
+#               workflows) and tracked via a GitHub deployment.
+#   PR closed / branch deleted → this workflow tears down the preview and marks
+#               the deployment as inactive.
+#   Weekly    → orphaned environments (deployments still "active" with no open
+#               PR or existing branch) are detected and an issue is opened.
+
+on:
+  delete:
+  pull_request:
+    types:
+      - closed
+  schedule:
+    # Every Monday at 08:00 UTC
+    - cron: "0 8 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+  issues: write
+  pull-requests: read
+
+jobs:
+  teardown-on-delete:
+    name: Tear down environment on branch deletion
+    if: github.event_name == 'delete' && github.event.ref_type == 'branch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deactivate deployments for deleted branch
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branch = context.payload.ref;
+            console.log(`Branch deleted: ${branch}`);
+
+            // List all deployments for this environment (named after the branch).
+            const envName = `preview/${branch}`;
+            let deployments;
+            try {
+              deployments = await github.rest.repos.listDeployments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                environment: envName,
+              });
+            } catch (e) {
+              console.log(`No deployments found for environment ${envName}: ${e.message}`);
+              return;
+            }
+
+            for (const deployment of deployments.data) {
+              // Mark deployment inactive before deleting (required by GitHub API).
+              await github.rest.repos.createDeploymentStatus({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                deployment_id: deployment.id,
+                state: "inactive",
+                description: `Branch ${branch} was deleted`,
+              });
+              console.log(`Marked deployment ${deployment.id} as inactive`);
+
+              try {
+                await github.rest.repos.deleteDeployment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  deployment_id: deployment.id,
+                });
+                console.log(`Deleted deployment ${deployment.id}`);
+              } catch (e) {
+                console.log(`Could not delete deployment ${deployment.id}: ${e.message}`);
+              }
+            }
+
+  teardown-on-pr-close:
+    name: Tear down environment when PR is closed
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deactivate deployments for closed PR branch
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branch = context.payload.pull_request.head.ref;
+            const prNumber = context.payload.pull_request.number;
+            console.log(`PR #${prNumber} closed, branch: ${branch}`);
+
+            const envName = `preview/${branch}`;
+            let deployments;
+            try {
+              deployments = await github.rest.repos.listDeployments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                environment: envName,
+              });
+            } catch (e) {
+              console.log(`No deployments found for ${envName}: ${e.message}`);
+              return;
+            }
+
+            for (const deployment of deployments.data) {
+              await github.rest.repos.createDeploymentStatus({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                deployment_id: deployment.id,
+                state: "inactive",
+                description: `PR #${prNumber} was closed`,
+              });
+              console.log(`Marked deployment ${deployment.id} as inactive`);
+
+              try {
+                await github.rest.repos.deleteDeployment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  deployment_id: deployment.id,
+                });
+                console.log(`Deleted deployment ${deployment.id}`);
+              } catch (e) {
+                console.log(`Could not delete deployment ${deployment.id}: ${e.message}`);
+              }
+            }
+
+  alert-orphaned:
+    name: Alert on orphaned environments
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Find and report orphaned deployments
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Fetch all deployments that are still active.
+            const deployments = await github.paginate(
+              github.rest.repos.listDeployments,
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                per_page: 100,
+              }
+            );
+
+            // Fetch all open PRs and existing branches for cross-reference.
+            const [openPRs, branches] = await Promise.all([
+              github.paginate(github.rest.pulls.list, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: "open",
+                per_page: 100,
+              }),
+              github.paginate(github.rest.repos.listBranches, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                per_page: 100,
+              }),
+            ]);
+
+            const openBranchNames = new Set(branches.map(b => b.name));
+            const openPRBranches = new Set(openPRs.map(pr => pr.head.ref));
+
+            const orphaned = [];
+            for (const d of deployments) {
+              if (!d.environment.startsWith("preview/")) continue;
+
+              // Get latest status for this deployment.
+              const statuses = await github.rest.repos.listDeploymentStatuses({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                deployment_id: d.id,
+                per_page: 1,
+              });
+              const latestState = statuses.data[0]?.state ?? "unknown";
+              if (latestState === "inactive") continue;
+
+              const branch = d.environment.replace("preview/", "");
+              if (!openBranchNames.has(branch) || !openPRBranches.has(branch)) {
+                orphaned.push({ id: d.id, environment: d.environment, branch, state: latestState });
+              }
+            }
+
+            if (orphaned.length === 0) {
+              console.log("No orphaned environments found.");
+              return;
+            }
+
+            const lines = orphaned.map(
+              o => `- Deployment #${o.id} · environment \`${o.environment}\` · branch \`${o.branch}\` · state: ${o.state}`
+            );
+            const body = [
+              "## 🚨 Orphaned preview environments detected",
+              "",
+              "The following preview deployments are still active but have no corresponding open PR or branch:",
+              "",
+              ...lines,
+              "",
+              "Please inspect each deployment above and tear it down manually if it is no longer needed.",
+              "Run the **Stale Environments** workflow with `workflow_dispatch` to clean up deployments for deleted branches.",
+            ].join("\n");
+
+            // Open a new issue only if one isn't already open for this.
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: "open",
+              labels: "stale-environment",
+              per_page: 1,
+            });
+
+            if (issues.data.length > 0) {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issues.data[0].number,
+                body,
+              });
+              console.log(`Updated existing issue #${issues.data[0].number}`);
+            } else {
+              const created = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: "Orphaned preview environments detected",
+                body,
+                labels: ["stale-environment"],
+              });
+              console.log(`Opened issue #${created.data.number}`);
+            }

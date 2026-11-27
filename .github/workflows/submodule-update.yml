@@ -1,0 +1,104 @@
+name: Submodule Update
+
+# Issue #220 – Automate submodule updates for lib/
+# Runs weekly and opens a PR for any submodule bumps so the full CI suite
+# (Foundry + Stellar) validates them before merge.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # every Monday at 06:00 UTC
+  workflow_dispatch: # allow manual trigger
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-submodules:
+    name: Bump submodules and open PR
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Update all submodules to latest remote HEAD
+        id: update
+        run: |
+          git submodule update --remote --merge
+          if git diff --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true"  >> "$GITHUB_OUTPUT"
+          fi
+
+      # Run Foundry checks only when Solidity submodules changed
+      - name: Install Foundry
+        if: steps.update.outputs.changed == 'true'
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Forge build + test on updated libs
+        if: steps.update.outputs.changed == 'true'
+        run: |
+          forge build --sizes
+          forge test -vvv
+
+      # Run Stellar checks only when stellar submodules changed (none today,
+      # but the step is included for future submodules under stellar/).
+      - name: Install Rust toolchain
+        if: steps.update.outputs.changed == 'true'
+        run: |
+          cd stellar
+          rustup toolchain install
+          rustc --version
+
+      - name: Stellar cargo test on updated libs
+        if: steps.update.outputs.changed == 'true'
+        run: |
+          cd stellar
+          cargo test --locked
+
+      - name: Commit bumped submodules
+        if: steps.update.outputs.changed == 'true'
+        run: |
+          git add .
+          git commit -m "chore(deps): weekly submodule bump $(date +%Y-%m-%d)"
+
+      - name: Open pull request
+        if: steps.update.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: chore/submodule-bump-${{ github.run_id }}
+          base: main
+          title: "chore(deps): weekly submodule bump"
+          body: |
+            ## Automated submodule bump
+
+            This PR was opened automatically by the **Submodule Update** workflow.
+
+            ### Changed submodules
+            ```
+            $(git submodule status)
+            ```
+
+            ### Review notes
+            - **openzeppelin-contracts** and **openzeppelin-contracts-upgradeable** –
+              review the diff for breaking changes in the `contracts/` directory and
+              any new audit findings in the upstream changelog.
+            - **chainlink-brownie-contracts** – check for interface changes to
+              `AggregatorV3Interface` and price-feed addresses.
+            - All other libs (forge-std, v3-core, v3-periphery, prb-math) – verify
+              no API renames that affect existing tests.
+
+            CI (Foundry build + tests, Stellar cargo test) passed on the bumped
+            versions before this PR was opened.
+          labels: "dependencies,devops"
+          draft: false

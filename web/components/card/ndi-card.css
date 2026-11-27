@@ -1,0 +1,229 @@
+/* ─── Design tokens ────────────────────────────────────────────────────────── */
+
+:host {
+  --ndi-card-bg: #111b2e;
+  --ndi-card-surface: #172035;
+  --ndi-card-fg: #edf3ff;
+  --ndi-card-muted: #aab8d0;
+  --ndi-card-accent: #7dd3fc;
+  --ndi-card-border: rgba(226, 236, 255, 0.16);
+  --ndi-card-error-bg: rgba(239, 68, 68, 0.12);
+  --ndi-card-error-fg: #fca5a5;
+  --ndi-card-error-border: rgba(239, 68, 68, 0.4);
+  --ndi-card-skeleton-base: rgba(226, 236, 255, 0.07);
+  --ndi-card-skeleton-shine: rgba(226, 236, 255, 0.14);
+  --ndi-card-radius: 12px;
+  --ndi-card-padding: clamp(1rem, 3vw, 1.5rem);
+  --ndi-card-padding-compact: clamp(0.625rem, 2vw, 0.875rem);
+  --ndi-card-gap: 0.75rem;
+
+  display: block;
+  color-scheme: dark light;
+}
+
+@media (prefers-color-scheme: light) {
+  :host {
+    --ndi-card-bg: #ffffff;
+    --ndi-card-surface: #f5f8fd;
+    --ndi-card-fg: #132033;
+    --ndi-card-muted: #4a5b74;
+    --ndi-card-accent: #0369a1;
+    --ndi-card-border: rgba(19, 32, 51, 0.16);
+    --ndi-card-error-bg: rgba(239, 68, 68, 0.08);
+    --ndi-card-error-fg: #b91c1c;
+    --ndi-card-error-border: rgba(239, 68, 68, 0.35);
+    --ndi-card-skeleton-base: rgba(19, 32, 51, 0.06);
+    --ndi-card-skeleton-shine: rgba(19, 32, 51, 0.12);
+  }
+}
+
+/* ─── Reset ────────────────────────────────────────────────────────────────── */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* ─── Card shell ───────────────────────────────────────────────────────────── */
+
+.ndi-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--ndi-card-bg);
+  color: var(--ndi-card-fg);
+  border: 1px solid var(--ndi-card-border);
+  border-radius: var(--ndi-card-radius);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  overflow: hidden;
+}
+
+/* ─── Slots ────────────────────────────────────────────────────────────────── */
+
+.ndi-card__header {
+  padding: var(--ndi-card-padding);
+  padding-bottom: 0;
+}
+
+.ndi-card__header:empty {
+  display: none;
+}
+
+.ndi-card__body {
+  flex: 1;
+  padding: var(--ndi-card-padding);
+}
+
+.ndi-card__footer {
+  padding: var(--ndi-card-padding);
+  padding-top: 0;
+  border-top: 1px solid var(--ndi-card-border);
+}
+
+.ndi-card__footer:empty {
+  display: none;
+}
+
+/* ─── Compact variant ──────────────────────────────────────────────────────── */
+
+:host([compact]) .ndi-card__header {
+  padding: var(--ndi-card-padding-compact);
+  padding-bottom: 0;
+}
+
+:host([compact]) .ndi-card__body {
+  padding: var(--ndi-card-padding-compact);
+}
+
+:host([compact]) .ndi-card__footer {
+  padding: var(--ndi-card-padding-compact);
+  padding-top: 0;
+}
+
+/* ─── Loading skeleton ─────────────────────────────────────────────────────── */
+
+@keyframes ndi-card-shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+.ndi-card__skeleton {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: var(--ndi-card-radius);
+  background: var(--ndi-card-bg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ndi-card-gap);
+  padding: var(--ndi-card-padding);
+}
+
+:host([compact]) .ndi-card__skeleton {
+  padding: var(--ndi-card-padding-compact);
+  gap: calc(var(--ndi-card-gap) * 0.75);
+}
+
+.ndi-card__skeleton-bar {
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    var(--ndi-card-skeleton-base) 25%,
+    var(--ndi-card-skeleton-shine) 50%,
+    var(--ndi-card-skeleton-base) 75%
+  );
+  background-size: 200% 100%;
+  animation: ndi-card-shimmer 1.6s ease-in-out infinite;
+}
+
+.ndi-card__skeleton-bar--title {
+  height: 1.125rem;
+  width: 55%;
+}
+
+.ndi-card__skeleton-bar--line {
+  height: 0.875rem;
+  width: 100%;
+}
+
+.ndi-card__skeleton-bar--line-short {
+  height: 0.875rem;
+  width: 75%;
+}
+
+.ndi-card__skeleton-bar--action {
+  height: 2rem;
+  width: 7rem;
+  margin-top: calc(var(--ndi-card-gap) * 0.5);
+  border-radius: 8px;
+}
+
+/* ─── Error state ──────────────────────────────────────────────────────────── */
+
+.ndi-card--error {
+  border-color: var(--ndi-card-error-border);
+  background: var(--ndi-card-error-bg);
+}
+
+.ndi-card__error {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  padding: var(--ndi-card-padding);
+}
+
+:host([compact]) .ndi-card__error {
+  padding: var(--ndi-card-padding-compact);
+}
+
+.ndi-card__error-icon {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  color: var(--ndi-card-error-fg);
+  margin-top: 0.1em;
+}
+
+.ndi-card__error-message {
+  color: var(--ndi-card-error-fg);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ─── Focus ────────────────────────────────────────────────────────────────── */
+
+.ndi-card a:focus-visible,
+.ndi-card button:focus-visible {
+  outline: 2px solid var(--ndi-card-accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* ─── Reduced motion ───────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .ndi-card__skeleton-bar {
+    animation: none;
+    background: var(--ndi-card-skeleton-base);
+  }
+}
+
+/* ─── High contrast ────────────────────────────────────────────────────────── */
+
+@media (prefers-contrast: more) {
+  .ndi-card {
+    --ndi-card-border: currentColor;
+  }
+
+  .ndi-card--error {
+    --ndi-card-error-border: currentColor;
+  }
+}

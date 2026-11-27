@@ -1,0 +1,47 @@
+# Quick local checks (format/lint). Install: https://pre-commit.com
+#   pip install pre-commit  (or brew install pre-commit)
+#   pre-commit install
+# Run on all files: pre-commit run --all-files
+#
+# Hooks that need external tools (forge, cargo, prettier, eslint) run only when
+# those tools are available, so contributors can install incrementally.
+
+default_stages: [pre-commit]
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-merge-conflict
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+
+  - repo: local
+    hooks:
+      - id: forge-fmt
+        name: forge fmt
+        entry: bash -lc 'command -v forge >/dev/null 2>&1 || { echo "forge not found, skipping"; exit 0; }; forge fmt --check'
+        language: system
+        pass_filenames: false
+        files: \.(sol|t\.sol)$
+
+      - id: cargo-fmt
+        name: cargo fmt (stellar)
+        entry: bash -lc 'command -v cargo >/dev/null 2>&1 || { echo "cargo not found, skipping"; exit 0; }; cd stellar && cargo fmt --all --check'
+        language: system
+        pass_filenames: false
+        files: (^stellar/.*\.rs$|^stellar/.*/Cargo\.toml$|^stellar/rust-toolchain\.toml$)
+
+      - id: prettier
+        name: prettier (check)
+        entry: bash -lc 'command -v npx >/dev/null 2>&1 || { echo "npx not found, skipping"; exit 0; }; npx --no-install prettier --check .'
+        language: system
+        pass_filenames: false
+        files: \.(md|mdx|json|ya?ml|css|scss|html|js|jsx|ts|tsx)$
+
+      - id: eslint
+        name: eslint
+        entry: bash -lc 'command -v npx >/dev/null 2>&1 || { echo "npx not found, skipping"; exit 0; }; npx --no-install eslint .'
+        language: system
+        pass_filenames: false
+        files: \.(js|jsx|ts|tsx)$

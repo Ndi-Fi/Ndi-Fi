@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ndi-Fi — empty-state preview</title>
+    <style>
+      :root {
+        --ndi-help-bg: #ffffff;
+        --ndi-help-fg: #1b2230;
+        --ndi-help-muted: #4c566a;
+        --ndi-help-border: #d8dee9;
+        --ndi-help-accent: #3457d5;
+        --ndi-help-accent-soft: #eef2ff;
+        --ndi-help-radius: 10px;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --ndi-help-bg: #141a26;
+          --ndi-help-fg: #f1f5f9;
+          --ndi-help-muted: #b8c2d4;
+          --ndi-help-border: #3a465c;
+          --ndi-help-accent: #9db4ff;
+          --ndi-help-accent-soft: #1e2a49;
+        }
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        background: var(--ndi-help-bg);
+        color: var(--ndi-help-fg);
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        font-size: 1rem;
+        line-height: 1.6;
+      }
+
+      .page-header {
+        padding: 1.25rem clamp(1rem, 4vw, 2.5rem);
+        border-bottom: 1px solid var(--ndi-help-border);
+      }
+
+      .page-header strong {
+        color: var(--ndi-help-accent);
+      }
+
+      main {
+        flex: 1;
+        width: min(72rem, 100%);
+        margin-inline: auto;
+        padding: 2.5rem clamp(1rem, 4vw, 2.5rem);
+        display: flex;
+        flex-direction: column;
+        gap: 3rem;
+      }
+
+      h1 {
+        margin: 0 0 0.25rem;
+        font-size: 1.5rem;
+      }
+
+      .intro {
+        color: var(--ndi-help-muted);
+        margin: 0;
+      }
+
+      .section-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--ndi-help-muted);
+        margin: 0 0 0.75rem;
+      }
+
+      .demo-grid {
+        display: grid;
+        gap: 1.5rem;
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
+      }
+
+      .demo-card {
+        border: 1px solid var(--ndi-help-border);
+        border-radius: var(--ndi-help-radius);
+        overflow: hidden;
+      }
+
+      .demo-card__label {
+        padding: 0.5rem 1rem;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        background: var(--ndi-help-accent-soft);
+        color: var(--ndi-help-accent);
+        border-bottom: 1px solid var(--ndi-help-border);
+      }
+
+      .demo-card__preview {
+        padding: 0.5rem;
+      }
+
+      #log {
+        margin-top: 0.5rem;
+        padding: 0.75rem 1rem;
+        font-size: 0.875rem;
+        font-family: ui-monospace, "Cascadia Code", "Fira Code", monospace;
+        background: var(--ndi-help-accent-soft);
+        border-radius: 6px;
+        color: var(--ndi-help-muted);
+        min-height: 2.5rem;
+      }
+    </style>
+    <link rel="stylesheet" href="./ndi-empty-state.css" />
+  </head>
+  <body>
+    <header class="page-header">
+      <strong>Ndi-Fi</strong> · component preview
+    </header>
+
+    <main>
+      <div>
+        <h1>Empty-state component</h1>
+        <p class="intro">
+          Drop-in <code>&lt;ndi-empty-state&gt;</code> for the three key screens:
+          no positions, no rewards, and no loans. No build step required.
+        </p>
+      </div>
+
+      <!-- ── Default variants ──────────────────────────────────────────── -->
+      <section>
+        <p class="section-label">Default variants — with bordered attribute</p>
+        <div class="demo-grid">
+
+          <div class="demo-card">
+            <div class="demo-card__label">variant="positions"</div>
+            <div class="demo-card__preview">
+              <ndi-empty-state
+                variant="positions"
+                bordered
+                cta-href="/deposit"
+              ></ndi-empty-state>
+            </div>
+          </div>
+
+          <div class="demo-card">
+            <div class="demo-card__label">variant="rewards"</div>
+            <div class="demo-card__preview">
+              <ndi-empty-state
+                variant="rewards"
+                bordered
+                cta-href="/stake"
+              ></ndi-empty-state>
+            </div>
+          </div>
+
+          <div class="demo-card">
+            <div class="demo-card__label">variant="loans"</div>
+            <div class="demo-card__preview">
+              <ndi-empty-state
+                variant="loans"
+                bordered
+                cta-href="/docs/borrow"
+              ></ndi-empty-state>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ── Custom copy ───────────────────────────────────────────────── -->
+      <section>
+        <p class="section-label">Custom heading, body, and secondary CTA</p>
+        <div class="demo-grid">
+
+          <div class="demo-card">
+            <div class="demo-card__label">Positions with secondary action</div>
+            <div class="demo-card__preview">
+              <ndi-empty-state
+                variant="positions"
+                heading="Your portfolio is empty"
+                body="Deposit assets to earn vault yield or stake LP tokens to earn NDI rewards."
+                cta-label="Deposit now"
+                cta-href="/deposit"
+                secondary-label="Learn more"
+                secondary-href="/docs/positions"
+                bordered
+              ></ndi-empty-state>
+            </div>
+          </div>
+
+          <div class="demo-card">
+            <div class="demo-card__label">Rewards — waiting to accrue</div>
+            <div class="demo-card__preview">
+              <ndi-empty-state
+                variant="rewards"
+                heading="Rewards start accruing soon"
+                body="Your NDI rewards will appear here once your stake has been active for at least one ledger."
+                cta-label="View your stake"
+                cta-href="/stake"
+                bordered
+              ></ndi-empty-state>
+            </div>
+          </div>
+
+          <div class="demo-card">
+            <div class="demo-card__label">Loans — borrower not approved</div>
+            <div class="demo-card__preview">
+              <ndi-empty-state
+                variant="loans"
+                heading="Borrowing not available"
+                body="A protocol owner must approve a borrower address before loans can be drawn from this vault."
+                cta-label="Read the docs"
+                cta-href="/docs/lending"
+                bordered
+              ></ndi-empty-state>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ── Button CTAs with event log ───────────────────────────────── -->
+      <section>
+        <p class="section-label">Button CTAs — click to see events</p>
+        <div class="demo-grid">
+
+          <div class="demo-card">
+            <div class="demo-card__label">variant="positions" — button CTA</div>
+            <div class="demo-card__preview">
+              <!-- No cta-href → renders as a <button> and fires the custom event -->
+              <ndi-empty-state
+                id="es-positions-btn"
+                variant="positions"
+                cta-label="Open a position"
+                bordered
+              ></ndi-empty-state>
+            </div>
+          </div>
+
+          <div class="demo-card">
+            <div class="demo-card__label">variant="rewards" — button CTA</div>
+            <div class="demo-card__preview">
+              <ndi-empty-state
+                id="es-rewards-btn"
+                variant="rewards"
+                cta-label="Stake LP tokens"
+                secondary-label="How rewards work"
+                bordered
+              ></ndi-empty-state>
+            </div>
+          </div>
+
+          <div class="demo-card">
+            <div class="demo-card__label">variant="loans" — button CTA</div>
+            <div class="demo-card__preview">
+              <ndi-empty-state
+                id="es-loans-btn"
+                variant="loans"
+                cta-label="Request borrower access"
+                bordered
+              ></ndi-empty-state>
+            </div>
+          </div>
+
+        </div>
+
+        <div id="log">Click a button above to see the fired event.</div>
+      </section>
+
+    </main>
+
+    <script type="module" src="./ndi-empty-state.js"></script>
+    <script type="module">
+      const log = document.getElementById('log');
+
+      document.addEventListener('ndi-empty-state:cta', (e) => {
+        log.textContent = `ndi-empty-state:cta  variant="${e.detail.variant}"  (${new Date().toLocaleTimeString()})`;
+      });
+      document.addEventListener('ndi-empty-state:secondary', (e) => {
+        log.textContent = `ndi-empty-state:secondary  variant="${e.detail.variant}"  (${new Date().toLocaleTimeString()})`;
+      });
+    </script>
+  </body>
+</html>

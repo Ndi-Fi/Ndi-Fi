@@ -1,0 +1,198 @@
+/* <ndi-button> styles. Consumes the Ndi-Fi design tokens (CSS variables) which
+   inherit through the shadow boundary, so light/dark themes apply automatically. */
+
+:host {
+  display: inline-block;
+  font-family: var(--ndi-font-sans, system-ui, sans-serif);
+}
+
+:host(.ndi-button--full-width) {
+  display: block;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+.ndi-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ndi-space-2, 0.5rem);
+  width: auto;
+  margin: 0;
+  padding: 0 var(--ndi-space-4, 1rem);
+  border: 1px solid transparent;
+  border-radius: var(--ndi-radius-md, 8px);
+  background: var(--ndi-color-primary, #3457d5);
+  color: var(--ndi-color-primary-contrast, #fff);
+  font-family: inherit;
+  font-size: var(--ndi-text-md, 1rem);
+  font-weight: var(--ndi-weight-semibold, 600);
+  line-height: var(--ndi-leading-tight, 1.2);
+  cursor: pointer;
+  transition: filter 120ms ease, box-shadow 120ms ease, background 120ms ease;
+  -webkit-user-select: none;
+  user-select: none;
+  appearance: none;
+}
+
+/* ---------- Sizes ---------- */
+
+.ndi-btn--sm {
+  min-height: 2rem;
+  padding: 0 var(--ndi-space-3, 0.75rem);
+  font-size: var(--ndi-text-sm, 0.875rem);
+}
+
+.ndi-btn--md {
+  min-height: 2.5rem;
+  padding: 0 var(--ndi-space-4, 1rem);
+  font-size: var(--ndi-text-md, 1rem);
+}
+
+.ndi-btn--lg {
+  min-height: 3rem;
+  padding: 0 var(--ndi-space-5, 1.5rem);
+  font-size: var(--ndi-text-lg, 1.125rem);
+}
+
+.ndi-btn--full {
+  width: 100%;
+}
+
+/* ---------- Variants ---------- */
+
+.ndi-btn--primary {
+  background: var(--ndi-color-primary);
+  color: var(--ndi-color-primary-contrast);
+}
+.ndi-btn--primary:hover {
+  filter: brightness(0.94);
+}
+.ndi-btn--primary:active {
+  filter: brightness(0.88);
+}
+
+.ndi-btn--secondary {
+  background: var(--ndi-color-surface);
+  color: var(--ndi-color-foreground);
+  border-color: var(--ndi-color-border);
+}
+.ndi-btn--secondary:hover {
+  background: var(--ndi-color-surface-muted);
+}
+.ndi-btn--secondary:active {
+  background: var(--ndi-color-secondary-soft);
+}
+
+.ndi-btn--ghost {
+  background: transparent;
+  color: var(--ndi-color-foreground);
+  border-color: transparent;
+}
+.ndi-btn--ghost:hover {
+  background: var(--ndi-color-surface-muted);
+}
+.ndi-btn--ghost:active {
+  background: var(--ndi-color-secondary-soft);
+}
+
+.ndi-btn--danger {
+  background: var(--ndi-color-danger);
+  color: var(--ndi-color-danger-contrast);
+}
+.ndi-btn--danger:hover {
+  filter: brightness(0.94);
+}
+.ndi-btn--danger:active {
+  filter: brightness(0.88);
+}
+
+/* ---------- Focus ring ---------- */
+
+.ndi-btn:focus-visible {
+  outline: 3px solid var(--ndi-color-focus-ring, var(--ndi-color-accent));
+  outline-offset: 2px;
+}
+
+/* ---------- Disabled / loading ---------- */
+
+.ndi-btn:disabled,
+.ndi-btn.is-loading,
+.ndi-btn.is-disabled {
+  cursor: not-allowed;
+  filter: none;
+}
+
+.ndi-btn:disabled {
+  opacity: 0.6;
+}
+
+/* Keep the spinner at full opacity while loading so it reads clearly. */
+.ndi-btn.is-loading {
+  opacity: 1;
+}
+
+/* ---------- Spinner ---------- */
+
+.ndi-btn__spinner {
+  display: none;
+  width: 1em;
+  height: 1em;
+  flex: none;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  opacity: 0.9;
+  animation: ndi-btn-spin 0.6s linear infinite;
+}
+
+.ndi-btn.is-loading .ndi-btn__spinner {
+  display: inline-block;
+}
+
+@keyframes ndi-btn-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- Icons ---------- */
+
+.ndi-btn__icon {
+  display: none; /* empty slot wrapper takes no space */
+  flex: none;
+  align-items: center;
+  font-size: 1.1em;
+  line-height: 0;
+}
+
+.ndi-btn__icon.is-filled {
+  display: inline-flex;
+}
+
+.ndi-btn__label {
+  display: inline-block;
+}
+
+/* ---------- Motion + contrast preferences ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .ndi-btn {
+    transition: none;
+  }
+  .ndi-btn__spinner {
+    animation: none;
+    /* show a static partial ring so loading is still perceivable */
+    border-right-color: transparent;
+  }
+}
+
+@media (forced-colors: active) {
+  .ndi-btn {
+    border-color: ButtonText;
+  }
+}

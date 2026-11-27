@@ -1,0 +1,94 @@
+name: PR Lint
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  lint-title:
+    name: Lint PR title
+    runs-on: ubuntu-latest
+    # Maintainers can bypass by adding the "bypass-title-lint" label
+    if: "!contains(github.event.pull_request.labels.*.name, 'bypass-title-lint')"
+    steps:
+      - name: Check conventional commit format
+        uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            docs
+            test
+            chore
+            ci
+            refactor
+            perf
+          scopes: |
+            token
+            lending
+            staking
+            stellar
+            docs
+            frontend
+            ci
+          requireScope: false
+          disallowScopes: []
+          subjectPattern: ^.+$
+          subjectPatternError: >
+            The PR title subject must not be empty.
+
+  auto-label:
+    name: Auto-label by title prefix
+    runs-on: ubuntu-latest
+    steps:
+      - name: Apply label from type prefix
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = context.payload.pull_request.title;
+            const match = title.match(/^(\w+)(\([\w-]+\))?!?:/);
+            if (!match) return;
+            const type = match[1];
+            const labelMap = {
+              feat:     'feature',
+              fix:      'bug',
+              docs:     'documentation',
+              test:     'test',
+              chore:    'chore',
+              ci:       'ci',
+              refactor: 'refactor',
+              perf:     'performance',
+            };
+            const label = labelMap[type];
+            if (!label) return;
+            // Ensure label exists (create if missing)
+            try {
+              await github.rest.issues.getLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: label,
+              });
+            } catch (e) {
+              if (e.status === 404) {
+                await github.rest.issues.createLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: label,
+                  color: 'ededed',
+                });
+              }
+            }
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              labels: [label],
+            });

@@ -1,0 +1,65 @@
+name: Docs – Build & Link Check
+
+# Runs only when documentation files change to keep CI fast.
+# Fails the PR if any internal links are broken.
+
+on:
+  push:
+    paths:
+      - "docs/**"
+      - "**.md"
+      - ".github/workflows/docs-check.yml"
+  pull_request:
+    paths:
+      - "docs/**"
+      - "**.md"
+      - ".github/workflows/docs-check.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  docs-link-check:
+    name: Build docs & check links
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # markdown-link-check checks every *.md file for broken links.
+      # It reports all broken links before exiting, so the full list is visible
+      # in a single run.  Internal anchors and relative paths are checked;
+      # external URLs are checked with a short timeout.
+      - name: Install markdown-link-check
+        run: npm install -g markdown-link-check
+
+      - name: Check links in all Markdown files
+        run: |
+          set +e
+          FAILED=0
+          while IFS= read -r -d '' file; do
+            echo "──────────────────────────────────────"
+            echo "Checking: $file"
+            markdown-link-check \
+              --config .github/mlc-config.json \
+              --verbose \
+              "$file" \
+              || FAILED=1
+          done < <(find . \
+            -not -path './.git/*' \
+            -not -path './node_modules/*' \
+            -not -path './lib/*' \
+            -not -path './stellar/target/*' \
+            -name '*.md' -print0)
+          echo "══════════════════════════════════════"
+          if [ "$FAILED" -eq 1 ]; then
+            echo "::error::Broken links detected. See output above for details."
+            exit 1
+          else
+            echo "✅ All links are valid."
+          fi

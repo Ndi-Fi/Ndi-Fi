@@ -1,0 +1,33 @@
+# ==============================================================================
+# Ndi-Fi Backend Dockerfile (Anvil EVM Node + Contract Deployer)
+# ==============================================================================
+FROM ghcr.io/foundry-rs/foundry:latest
+
+USER root
+
+# Install Node.js, bash, curl for build-time validation and health checks
+RUN apk add --no-cache bash curl nodejs npm jq
+
+WORKDIR /app
+
+# Copy repo configuration files
+COPY foundry.toml remappings.txt .env.example ./
+COPY scripts/ ./scripts/
+COPY src/ ./src/
+COPY script/ ./script/
+COPY lib/ ./lib/
+
+# ------------------------------------------------------------------------------
+# Build-time validation: Validate .env.example specification
+# ------------------------------------------------------------------------------
+RUN node ./scripts/validate-env.js --check-example
+
+EXPOSE 8545
+
+# Healthcheck testing local JSON-RPC
+HEALTHCHECK --interval=5s --timeout=3s --retries=5 --start-period=3s \
+  CMD curl -sf -X POST -H 'Content-Type: application/json' \
+      -d '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}' \
+      http://127.0.0.1:8545 || exit 1
+
+ENTRYPOINT ["anvil", "--host", "0.0.0.0", "--port", "8545"]

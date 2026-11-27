@@ -1,8 +1,9 @@
 # Stellar Wave: draft issue backlog
 
 Draft issues for maintainers to post on GitHub with the **Wave task** template
-(`.github/ISSUE_TEMPLATE/wave-task.md`). Each one is self-contained. Suggested
-labels: `stellar`, `wave`, plus `trivial` / `medium` / `high`.
+(`.github/ISSUE_TEMPLATE/wave-task.md`). For setup instructions, starter task paths,
+and mentorship guidelines, see the [Contributor Onboarding Guide](../ONBOARDING.md).
+Each issue below is self-contained. Suggested labels: `stellar`, `wave`, plus `trivial` / `medium` / `high`.
 
 Reminder for every issue: *Do not start work until a maintainer assigns the
 issue to you. Comment on the issue to express interest. PRs must include

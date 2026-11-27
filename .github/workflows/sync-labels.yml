@@ -1,0 +1,36 @@
+name: Sync Labels
+
+# How to propose label changes:
+# 1. Edit .github/labels.yml (add, modify, or remove label entries).
+# 2. Open a PR — this workflow will preview the diff on push to main.
+# 3. Labels are reconciled automatically on merge to main.
+# Deletion is opt-in: set `delete_other_labels: false` (default) to avoid
+# accidentally removing labels created outside this file.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/labels.yml"
+      - ".github/workflows/sync-labels.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  sync-labels:
+    name: Reconcile labels
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync labels from .github/labels.yml
+        uses: EndBug/label-sync@v2
+        with:
+          config-file: .github/labels.yml
+          # Set to true only after reviewing what would be deleted.
+          delete_other_labels: false
+          token: ${{ secrets.GITHUB_TOKEN }}
