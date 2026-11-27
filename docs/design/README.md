@@ -9,6 +9,14 @@ covers the four screens that together form the public product surface:
 | [02 — Lending flow screens](02-lending-flows.md) | #137 | Deposit / withdraw / borrow / repay / liquidate, state map, health-factor & risk viz, handoff |
 | [03 — Staking flow screens](03-staking-flows.md) | #138 | Stake / claim / unstake / emergency-withdraw, cooldown, penalties, rewards viz, ETH ↔ Stellar parity |
 | [04 — Wallet connection states & flows](04-wallet-connection.md) | #140 | Connect states, network switch, account menu, mobile wallet patterns |
+| [05 — Dark mode & WCAG AA contrast](05-dark-mode.md) | #147 | Dark-first theming, contrast audit of every colour pair per screen, no-flash theme switching |
+| [06 — Onboarding & first-run experience](06-onboarding.md) | #152 | Guided tour, contextual hints, when to prompt for a wallet, borrowing risk education, skip/replay |
+| [Error states & recovery guidance](../../web/components/error/README.md) | #145 | Templates for contract reverts, network and wallet errors; en/es/fr copy; `<ndi-error>` |
+| [Icons & iconography guidelines](../../web/components/icon/README.md) | #146 | 46-icon SVG set, sizing/alignment/colour rules, accessibility, `<ndi-icon>` |
+
+Specs 05–06 and the error/icon guides ship with working, tested code in
+`web/` (`web/design-tokens/`, `web/theme/`, `web/components/`). For colour
+values, the tokens in `web/design-tokens/` are the implemented source of truth.
 
 These are **design specs**, not implementation. There is no frontend codebase
 yet; the deliverable is wireframes, state maps, visualization specs and

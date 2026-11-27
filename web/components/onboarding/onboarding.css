@@ -1,0 +1,29 @@
+/* Page-level (light DOM) styles for the onboarding tour. Link once per page:
+ *   <link rel="stylesheet" href="/web/components/onboarding/onboarding.css" />
+ *
+ * The tour marks the element it is pointing at with [data-ndi-tour-target];
+ * the spotlight has to live outside the component's shadow root to reach it.
+ */
+
+[data-ndi-tour-target] {
+  position: relative;
+  z-index: 999;
+  outline: 3px solid var(--ndi-color-focus-ring);
+  outline-offset: 4px;
+  border-radius: var(--ndi-radius-md);
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45);
+  transition: outline-offset 150ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-ndi-tour-target] {
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  [data-ndi-tour-target] {
+    outline-color: Highlight;
+    box-shadow: none;
+  }
+}

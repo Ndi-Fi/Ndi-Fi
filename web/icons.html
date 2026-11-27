@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark light" />
+    <title>Ndi-Fi · Icon set</title>
+    <!-- Apply a stored theme before first paint (see theme/theme.js). -->
+    <script>(function(){try{var t=localStorage.getItem('ndi-theme');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);document.documentElement.style.colorScheme=t;}}catch(e){}})();</script>
+    <link rel="stylesheet" href="./design-tokens/tokens.css" />
+    <style>
+      body {
+        margin: 0;
+        background: var(--ndi-color-background);
+        color: var(--ndi-color-foreground);
+        font: var(--ndi-text-md) / var(--ndi-leading-normal) var(--ndi-font-sans);
+      }
+      main { max-width: 72rem; margin: 0 auto; padding: var(--ndi-space-6) var(--ndi-space-4); }
+      header { display: flex; flex-wrap: wrap; gap: var(--ndi-space-3); align-items: center; justify-content: space-between; }
+      h1 { margin: 0; font-size: var(--ndi-text-2xl); }
+      h2 { margin: var(--ndi-space-6) 0 var(--ndi-space-3); font-size: var(--ndi-text-lg); }
+      p { color: var(--ndi-color-muted); }
+      .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: var(--ndi-space-3); }
+      figure {
+        margin: 0; padding: var(--ndi-space-4) var(--ndi-space-2);
+        display: grid; justify-items: center; gap: var(--ndi-space-2);
+        background: var(--ndi-color-surface); border: 1px solid var(--ndi-color-border);
+        border-radius: var(--ndi-radius-lg);
+      }
+      figcaption { font: var(--ndi-text-xs) var(--ndi-font-mono); color: var(--ndi-color-muted); }
+      .sizes { display: flex; align-items: end; gap: var(--ndi-space-4); flex-wrap: wrap; }
+      .sizes span { display: grid; justify-items: center; gap: var(--ndi-space-1); font: var(--ndi-text-xs) var(--ndi-font-mono); color: var(--ndi-color-muted); }
+      .status { display: flex; gap: var(--ndi-space-4); flex-wrap: wrap; }
+      .status ndi-icon[name='success'] { color: var(--ndi-color-success); }
+      .status ndi-icon[name='warning'] { color: var(--ndi-color-warning); }
+      .status ndi-icon[name='error'] { color: var(--ndi-color-danger); }
+      .status ndi-icon[name='info'] { color: var(--ndi-color-info); }
+      button {
+        display: inline-flex; align-items: center; gap: var(--ndi-space-2);
+        min-height: 44px; padding: 0 var(--ndi-space-4);
+        border: 1px solid var(--ndi-color-border); border-radius: var(--ndi-radius-md);
+        background: var(--ndi-color-surface); color: inherit; font: inherit; cursor: pointer;
+      }
+      button:focus-visible { outline: 2px solid var(--ndi-color-focus-ring); outline-offset: 2px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Icon set</h1>
+        <button type="button" id="theme"><ndi-icon name="moon"></ndi-icon><span>Theme: system</span></button>
+      </header>
+      <p>Outline icons on a 24px grid, 1.75px stroke, drawn in <code>currentColor</code>. Guidelines: <code>web/components/icon/README.md</code>.</p>
+
+      <h2>Sizes</h2>
+      <div class="sizes" id="sizes"></div>
+
+      <h2>Status colours</h2>
+      <div class="status">
+        <ndi-icon name="success" size="lg" label="Success"></ndi-icon>
+        <ndi-icon name="warning" size="lg" label="Warning"></ndi-icon>
+        <ndi-icon name="error" size="lg" label="Error"></ndi-icon>
+        <ndi-icon name="info" size="lg" label="Information"></ndi-icon>
+      </div>
+
+      <div id="groups"></div>
+    </main>
+
+    <script type="module">
+      import './components/icon/ndi-icon.js';
+      import { ICONS, ICON_SIZES } from './components/icon/icons.js';
+      import { getThemePreference, nextPreference, setThemePreference } from './theme/theme.js';
+
+      const GROUPS = {
+        'DeFi actions': ['deposit', 'withdraw', 'borrow', 'repay', 'stake', 'rewards', 'swap'],
+        'Wallet & network': ['wallet', 'connect-wallet', 'network', 'switch-network'],
+        'Positions & risk': ['dashboard', 'positions', 'history', 'health', 'liquidation', 'risk', 'lock', 'unlock'],
+        'Status & feedback': ['info', 'success', 'warning', 'error', 'help', 'lightbulb', 'book', 'sparkle'],
+        Interface: ['check', 'close', 'plus', 'minus', 'menu', 'refresh', 'arrow-left', 'arrow-right', 'chevron-up', 'chevron-down', 'chevron-left', 'chevron-right', 'external-link', 'copy', 'search', 'settings', 'user', 'sun', 'moon'],
+      };
+
+      const sizes = document.getElementById('sizes');
+      for (const [token, px] of Object.entries(ICON_SIZES)) {
+        const span = document.createElement('span');
+        span.innerHTML = `<ndi-icon name="wallet" size="${token}"></ndi-icon>${token} · ${px}px`;
+        sizes.append(span);
+      }
+
+      const groups = document.getElementById('groups');
+      for (const [title, names] of Object.entries(GROUPS)) {
+        const h2 = document.createElement('h2');
+        h2.textContent = title;
+        const grid = document.createElement('div');
+        grid.className = 'grid';
+        for (const name of names) {
+          const fig = document.createElement('figure');
+          fig.innerHTML = `<ndi-icon name="${name}" size="lg" label="${ICONS[name].title}"></ndi-icon><figcaption>${name}</figcaption>`;
+          grid.append(fig);
+        }
+        groups.append(h2, grid);
+      }
+
+      const button = document.getElementById('theme');
+      const render = (pref) => {
+        button.querySelector('span').textContent = `Theme: ${pref}`;
+        button.querySelector('ndi-icon').setAttribute('name', pref === 'light' ? 'sun' : 'moon');
+      };
+      render(getThemePreference());
+      button.addEventListener('click', () => {
+        const pref = nextPreference(getThemePreference());
+        setThemePreference(pref);
+        render(pref);
+      });
+    </script>
+  </body>
+</html>

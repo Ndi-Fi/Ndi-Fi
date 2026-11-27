@@ -64,21 +64,21 @@
   --ndi-color-light-danger-soft: #fee2e2;
   --ndi-color-dark-danger-soft: #3a1d1d;
 
-  --ndi-color-light-success: #16a34a;
+  --ndi-color-light-success: #15803d;
   --ndi-color-dark-success: #4ade80;
   --ndi-color-light-success-contrast: #ffffff;
   --ndi-color-dark-success-contrast: #0d121c;
   --ndi-color-light-success-soft: #dcfce7;
   --ndi-color-dark-success-soft: #14351f;
 
-  --ndi-color-light-warning: #d97706;
+  --ndi-color-light-warning: #b45309;
   --ndi-color-dark-warning: #fbbf24;
   --ndi-color-light-warning-contrast: #ffffff;
   --ndi-color-dark-warning-contrast: #0d121c;
   --ndi-color-light-warning-soft: #fef3c7;
   --ndi-color-dark-warning-soft: #3a2e0e;
 
-  --ndi-color-light-info: #0284c7;
+  --ndi-color-light-info: #0369a1;
   --ndi-color-dark-info: #38bdf8;
   --ndi-color-light-info-contrast: #ffffff;
   --ndi-color-dark-info-contrast: #0d121c;
@@ -87,7 +87,7 @@
 
   --ndi-color-light-accent: #3457d5;
   --ndi-color-dark-accent: #9db4ff;
-  --ndi-color-light-focus-ring: rgba(52, 87, 213, 0.5);
+  --ndi-color-light-focus-ring: rgba(52, 87, 213, 0.8);
   --ndi-color-dark-focus-ring: rgba(157, 180, 255, 0.55);
 
   /* ---- Shadow sources ---- */

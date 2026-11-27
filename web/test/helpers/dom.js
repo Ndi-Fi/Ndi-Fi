@@ -157,6 +157,15 @@ export class FakeElement {
     }
   }
 
+  prepend(...nodes) {
+    for (const node of nodes.reverse()) {
+      const child = typeof node === 'string' ? this.ownerDocument.createTextNode(node) : node;
+      if (child.parentNode) child.parentNode.removeChild(child);
+      child.parentNode = this;
+      this._children.unshift(child);
+    }
+  }
+
   appendChild(node) {
     if (node.parentNode) node.parentNode.removeChild(node);
     node.parentNode = this;
@@ -324,6 +333,13 @@ export class FakeDocument extends FakeElement {
     const node = Constructor ? new Constructor() : new FakeElement(tag);
     node.ownerDocument = this;
     if (Constructor) node.tagName = String(tag).toUpperCase();
+    return node;
+  }
+
+  createElementNS(namespaceURI, tag) {
+    const node = new FakeElement(tag);
+    node.namespaceURI = namespaceURI;
+    node.ownerDocument = this;
     return node;
   }
 

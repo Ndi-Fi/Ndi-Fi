@@ -1,0 +1,206 @@
+/**
+ * <ndi-error> styles — token-based, so light/dark follow the active theme.
+ *
+ * Severity tints: error → danger, warning → warning, info → info. Body text is
+ * always --ndi-color-foreground on the matching -soft tint, and the icon uses
+ * the strong tone; both pairs are covered by design-tokens/contrast.test.js.
+ */
+
+:host {
+  display: block;
+  font-family: var(--ndi-font-sans);
+  font-size: var(--ndi-text-sm);
+  line-height: var(--ndi-leading-normal);
+  color: var(--ndi-color-foreground);
+}
+
+:host([hidden]),
+[hidden] {
+  display: none !important;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+.ndi-error {
+  --_tone: var(--ndi-color-danger);
+  --_tone-contrast: var(--ndi-color-danger-contrast);
+  --_tint: var(--ndi-color-danger-soft);
+
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: var(--ndi-space-3);
+  row-gap: var(--ndi-space-2);
+  align-items: start;
+  padding: var(--ndi-space-4);
+  background: var(--_tint);
+  border: 1px solid var(--_tone);
+  border-left-width: 4px;
+  border-radius: var(--ndi-radius-md);
+}
+
+.ndi-error[data-severity='warning'] {
+  --_tone: var(--ndi-color-warning);
+  --_tone-contrast: var(--ndi-color-warning-contrast);
+  --_tint: var(--ndi-color-warning-soft);
+}
+
+.ndi-error[data-severity='info'] {
+  --_tone: var(--ndi-color-info);
+  --_tone-contrast: var(--ndi-color-info-contrast);
+  --_tint: var(--ndi-color-info-soft);
+}
+
+.ndi-error__icon {
+  grid-row: 1 / span 2;
+  display: inline-flex;
+  padding-top: 1px;
+  color: var(--_tone);
+  line-height: 0;
+}
+
+.ndi-error__body {
+  display: grid;
+  gap: var(--ndi-space-1);
+  min-width: 0;
+}
+
+.ndi-error__title {
+  margin: 0;
+  font-weight: var(--ndi-weight-semibold);
+}
+
+.ndi-error__message {
+  margin: 0;
+}
+
+.ndi-error__actions {
+  grid-column: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ndi-space-2);
+}
+
+.ndi-error__cta,
+.ndi-error__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ndi-space-1);
+  min-height: 36px;
+  padding: 0 var(--ndi-space-3);
+  border: 1px solid transparent;
+  border-radius: var(--ndi-radius-md);
+  font: inherit;
+  font-weight: var(--ndi-weight-semibold);
+  cursor: pointer;
+  transition: filter 120ms ease-out, background 120ms ease-out;
+}
+
+.ndi-error__cta--primary {
+  background: var(--_tone);
+  color: var(--_tone-contrast);
+}
+
+.ndi-error__cta--primary:hover {
+  filter: brightness(1.08);
+}
+
+.ndi-error__cta--ghost,
+.ndi-error__close {
+  background: transparent;
+  color: var(--ndi-color-foreground);
+  border-color: var(--ndi-color-border);
+}
+
+.ndi-error__close {
+  min-width: 36px;
+  padding: 0;
+}
+
+.ndi-error__cta--ghost:hover,
+.ndi-error__close:hover {
+  background: var(--ndi-color-surface-muted);
+}
+
+.ndi-error__cta:focus-visible,
+.ndi-error__close:focus-visible,
+.ndi-error__details summary:focus-visible {
+  outline: 2px solid var(--ndi-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.ndi-error__details {
+  grid-column: 2;
+  font-size: var(--ndi-text-xs);
+}
+
+.ndi-error__details summary {
+  width: fit-content;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.ndi-error__raw {
+  margin: var(--ndi-space-2) 0 0;
+  padding: var(--ndi-space-2);
+  max-height: 10rem;
+  overflow: auto;
+  border-radius: var(--ndi-radius-sm);
+  background: var(--ndi-color-surface);
+  color: var(--ndi-color-foreground);
+  font-family: var(--ndi-font-mono);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ── Compact: one line, for form fields and table rows ─────────────────── */
+
+:host([compact]) .ndi-error {
+  display: flex;
+  align-items: center;
+  gap: var(--ndi-space-2);
+  padding: var(--ndi-space-2) var(--ndi-space-3);
+  border-left-width: 1px;
+}
+
+:host([compact]) .ndi-error__title,
+:host([compact]) .ndi-error__details {
+  display: none;
+}
+
+:host([compact]) .ndi-error__icon {
+  padding-top: 0;
+}
+
+:host([compact]) .ndi-error__body {
+  flex: 1;
+}
+
+:host([compact]) .ndi-error__cta,
+:host([compact]) .ndi-error__close {
+  min-height: 28px;
+  padding: 0 var(--ndi-space-2);
+  font-size: var(--ndi-text-xs);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ndi-error__cta,
+  .ndi-error__close {
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .ndi-error {
+    border-color: CanvasText;
+  }
+  .ndi-error__cta--primary {
+    border-color: ButtonText;
+  }
+}

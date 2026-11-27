@@ -13,6 +13,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 - Protocol incident runbook (`docs/RUNBOOK.md`) — closes #197
 - Troubleshooting FAQ (`docs/FAQ.md`) — closes #201
 - Changelog and release process (`CHANGELOG.md`, `docs/RELEASE.md`) — closes #199
+- Error states: `<ndi-error>` plus a template catalogue that maps protocol reverts, wallet and network errors to en/es/fr copy with retry / switch-network / connect-wallet actions (`web/components/error/`) — closes #145
+- Icon set: 46 SVG icons, `<ndi-icon>`, `iconSvg()` and iconography guidelines (`web/components/icon/`, `web/icons.html`) — closes #146
+- Dark mode to WCAG AA: contrast audit and CI test for every token pair, no-flash theme runtime (`web/design-tokens/contrast.js`, `web/theme/`, `docs/design/05-dark-mode.md`) — closes #147
+- Onboarding: guided tour, contextual hints, wallet prompts and borrowing risk acknowledgement (`web/components/onboarding/`, `docs/design/06-onboarding.md`) — closes #152
+
+### Changed
+- Light-theme `success`, `warning`, `info` and `focus-ring` tokens darkened to meet WCAG AA (#147)
 
 ---
 
