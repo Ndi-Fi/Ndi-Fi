@@ -1,0 +1,51 @@
+# Dockerfile for Stellar Soroban builds
+# Pinned versions for reproducible builds
+
+FROM ubuntu:22.04
+
+# Prevent interactive prompts during package installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    git \
+    ca-certificates \
+    build-essential \
+    pkg-config \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Rust with pinned version (from rust-toolchain.toml)
+ENV RUST_VERSION=1.99.1
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain $RUST_VERSION
+ENV PATH="/root/.cargo/bin:$PATH"
+
+# Verify Rust installation
+RUN rustc --version && \
+    cargo --version
+
+# Install stellar-cli with pinned version
+ENV STELLAR_CLI_VERSION=22.0.0
+RUN cargo install stellar-cli --version $STELLAR_CLI_VERSION
+
+# Verify stellar-cli installation
+RUN stellar --version
+
+# Set working directory
+WORKDIR /app
+
+# Copy stellar directory
+COPY stellar/ ./stellar/
+
+# Change to stellar directory
+WORKDIR /app/stellar
+
+# Build contracts
+RUN cargo build --release
+
+# Run tests
+RUN cargo test
+
+# Default command
+CMD ["cargo", "build", "--release"]

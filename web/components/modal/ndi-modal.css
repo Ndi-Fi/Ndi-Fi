@@ -1,0 +1,272 @@
+/*
+ * Styles for <ndi-modal>.
+ *
+ * All tokens are scoped under :host so embedding pages cannot accidentally
+ * bleed in. Light-mode overrides live in the prefers-color-scheme block.
+ */
+
+:host {
+  --ndi-modal-bg: #111b2e;
+  --ndi-modal-fg: #edf3ff;
+  --ndi-modal-muted: #aab8d0;
+  --ndi-modal-accent: #7dd3fc;
+  --ndi-modal-border: rgba(226, 236, 255, 0.16);
+  --ndi-modal-backdrop: rgba(0, 0, 0, 0.6);
+  --ndi-modal-radius: 12px;
+  --ndi-modal-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+  --ndi-modal-header-bg: #0b1220;
+  --ndi-modal-close-bg: rgba(226, 236, 255, 0.08);
+  --ndi-modal-close-bg-hover: rgba(226, 236, 255, 0.16);
+
+  /* Width caps per size variant */
+  --ndi-modal-width-sm: 400px;
+  --ndi-modal-width-md: 600px;
+  --ndi-modal-width-lg: 800px;
+
+  /* Animation timings */
+  --ndi-modal-duration: 220ms;
+  --ndi-modal-easing: cubic-bezier(0.16, 1, 0.3, 1);
+
+  display: contents;
+  color-scheme: dark light;
+}
+
+@media (prefers-color-scheme: light) {
+  :host {
+    --ndi-modal-bg: #ffffff;
+    --ndi-modal-fg: #132033;
+    --ndi-modal-muted: #4a5b74;
+    --ndi-modal-accent: #0369a1;
+    --ndi-modal-border: rgba(19, 32, 51, 0.16);
+    --ndi-modal-backdrop: rgba(19, 32, 51, 0.5);
+    --ndi-modal-shadow: 0 24px 64px rgba(19, 32, 51, 0.2);
+    --ndi-modal-header-bg: #f5f8fd;
+    --ndi-modal-close-bg: rgba(19, 32, 51, 0.06);
+    --ndi-modal-close-bg-hover: rgba(19, 32, 51, 0.12);
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* ── Backdrop ── */
+
+.ndi-modal__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  background: var(--ndi-modal-backdrop);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(1rem, 4vw, 2rem);
+  animation: ndi-modal-backdrop-in var(--ndi-modal-duration) ease both;
+}
+
+@keyframes ndi-modal-backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.ndi-modal__backdrop--closing {
+  animation: ndi-modal-backdrop-out var(--ndi-modal-duration) ease both;
+}
+
+@keyframes ndi-modal-backdrop-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+/* ── Dialog panel ── */
+
+.ndi-modal__panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: var(--ndi-modal-width-md);
+  max-height: calc(100dvh - 4rem);
+  background: var(--ndi-modal-bg);
+  color: var(--ndi-modal-fg);
+  border: 1px solid var(--ndi-modal-border);
+  border-radius: var(--ndi-modal-radius);
+  box-shadow: var(--ndi-modal-shadow);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  animation: ndi-modal-panel-in var(--ndi-modal-duration) var(--ndi-modal-easing) both;
+  overflow: hidden;
+}
+
+@keyframes ndi-modal-panel-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.ndi-modal__backdrop--closing .ndi-modal__panel {
+  animation: ndi-modal-panel-out var(--ndi-modal-duration) ease both;
+}
+
+@keyframes ndi-modal-panel-out {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95) translateY(6px);
+  }
+}
+
+/* Size variants */
+
+.ndi-modal__panel[data-size="sm"] {
+  max-width: var(--ndi-modal-width-sm);
+}
+
+.ndi-modal__panel[data-size="lg"] {
+  max-width: var(--ndi-modal-width-lg);
+}
+
+/* ── Header ── */
+
+.ndi-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: var(--ndi-modal-header-bg);
+  border-bottom: 1px solid var(--ndi-modal-border);
+  flex: none;
+}
+
+.ndi-modal__title-slot {
+  flex: 1;
+  min-width: 0;
+  font-size: 1.0625rem;
+  font-weight: 700;
+}
+
+/* ── Close button ── */
+
+.ndi-modal__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid var(--ndi-modal-border);
+  border-radius: 6px;
+  background: var(--ndi-modal-close-bg);
+  color: var(--ndi-modal-muted);
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease;
+}
+
+.ndi-modal__close:hover {
+  background: var(--ndi-modal-close-bg-hover);
+  color: var(--ndi-modal-fg);
+}
+
+.ndi-modal__close:focus-visible {
+  outline: 2px solid var(--ndi-modal-accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* ── Body ── */
+
+.ndi-modal__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem;
+  overscroll-behavior: contain;
+}
+
+/* ── Footer ── */
+
+.ndi-modal__footer {
+  flex: none;
+  padding: 1rem 1.25rem;
+  border-top: 1px solid var(--ndi-modal-border);
+  background: var(--ndi-modal-header-bg);
+}
+
+/* Hide footer wrapper when the slot has no content */
+.ndi-modal__footer:not(:has(slot[name="footer"] > *)) {
+  display: none;
+}
+
+/* ── Bottom-sheet variant ── */
+
+@media (max-width: 47.99rem) {
+  :host([sheet]) .ndi-modal__backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  :host([sheet]) .ndi-modal__panel {
+    max-width: 100%;
+    max-height: 90dvh;
+    border-radius: var(--ndi-modal-radius) var(--ndi-modal-radius) 0 0;
+    border-bottom: 0;
+    animation: ndi-modal-sheet-in var(--ndi-modal-duration) var(--ndi-modal-easing) both;
+  }
+
+  @keyframes ndi-modal-sheet-in {
+    from {
+      opacity: 0;
+      transform: translateY(100%);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  :host([sheet]) .ndi-modal__backdrop--closing .ndi-modal__panel {
+    animation: ndi-modal-sheet-out var(--ndi-modal-duration) ease both;
+  }
+
+  @keyframes ndi-modal-sheet-out {
+    from {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(100%);
+    }
+  }
+}
+
+/* ── Reduced motion ── */
+
+@media (prefers-reduced-motion: reduce) {
+  .ndi-modal__backdrop,
+  .ndi-modal__backdrop--closing,
+  .ndi-modal__panel,
+  .ndi-modal__backdrop--closing .ndi-modal__panel {
+    animation: none;
+  }
+}
+
+/* ── High contrast ── */
+
+@media (prefers-contrast: more) {
+  :host {
+    --ndi-modal-border: currentColor;
+  }
+}

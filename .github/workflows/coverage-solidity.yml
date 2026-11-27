@@ -1,0 +1,125 @@
+name: Coverage – Solidity
+
+on:
+  push:
+    paths:
+      - "src/**"
+      - "test/**"
+      - "foundry.toml"
+      - ".github/workflows/coverage-solidity.yml"
+  pull_request:
+    paths:
+      - "src/**"
+      - "test/**"
+      - "foundry.toml"
+      - ".github/workflows/coverage-solidity.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write   # needed to post the coverage comment
+
+env:
+  FOUNDRY_PROFILE: ci
+  # Minimum line-coverage percentage (integer, e.g. 60 means 60 %).
+  # Raise this as the test suite matures.
+  COVERAGE_THRESHOLD: 60
+
+jobs:
+  coverage:
+    name: forge coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: 1.2.3
+
+      - name: Install lcov (genhtml)
+        run: sudo apt-get install -y lcov
+
+      - name: Run forge coverage
+        run: |
+          forge coverage \
+            --report lcov \
+            --lcov-version 2 \
+            --report-file lcov.info
+
+      - name: Extract line-coverage percentage
+        id: cov
+        run: |
+          # lcov summary line looks like:
+          #   lines......: 72.3% (459 of 635 lines)
+          PCT=$(lcov --summary lcov.info 2>&1 \
+                | grep -oP 'lines\.\.\.\.\.\.: \K[0-9.]+')
+          echo "pct=$PCT" >> "$GITHUB_OUTPUT"
+          echo "Coverage: ${PCT}%"
+
+      - name: Enforce threshold
+        run: |
+          PCT=${{ steps.cov.outputs.pct }}
+          THRESHOLD=${{ env.COVERAGE_THRESHOLD }}
+          # Use awk for float comparison (bash only handles integers)
+          awk -v pct="$PCT" -v thr="$THRESHOLD" 'BEGIN {
+            if (pct + 0 < thr + 0) {
+              printf "Coverage %.1f%% is below threshold %d%%\n", pct, thr
+              exit 1
+            } else {
+              printf "Coverage %.1f%% meets threshold %d%%\n", pct, thr
+            }
+          }'
+
+      - name: Generate HTML report
+        run: |
+          genhtml lcov.info \
+            --output-directory coverage-html \
+            --title "Ndi-Fi Solidity Coverage" \
+            --ignore-errors source
+
+      - name: Upload lcov artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: solidity-lcov
+          path: lcov.info
+          retention-days: 30
+
+      - name: Upload HTML report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: solidity-coverage-html
+          path: coverage-html/
+          retention-days: 30
+
+      - name: Post coverage summary to PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pct = '${{ steps.cov.outputs.pct }}';
+            const thr = process.env.COVERAGE_THRESHOLD;
+            const icon = parseFloat(pct) >= parseInt(thr) ? '✅' : '❌';
+            const body = [
+              '## Solidity Coverage Report ' + icon,
+              '',
+              `| Metric | Value |`,
+              `|--------|-------|`,
+              `| Line coverage | **${pct}%** |`,
+              `| Threshold | ${thr}% |`,
+              '',
+              'Full HTML report is available as a workflow artifact (`solidity-coverage-html`).',
+              '',
+              '> To view coverage locally: `forge coverage --report lcov && genhtml lcov.info -o coverage-html`',
+            ].join('\n');
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body,
+            });
+        env:
+          COVERAGE_THRESHOLD: ${{ env.COVERAGE_THRESHOLD }}

@@ -8,7 +8,12 @@ out/
 /broadcast/**/dry-run/
 
 # Docs
-docs/
+docs/*
+!docs/*.md
+!docs/stellar/
+
+# Generated Solidity API reference (produced by `forge doc` in CI)
+docs/reference/solidity/
 
 # Dotenv file
 .env

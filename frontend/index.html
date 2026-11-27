@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ndi-Fi · DeFi help patterns</title>
+    <link rel="stylesheet" href="./src/styles.css" />
+    <style>
+      body {
+        margin: 0;
+        background: #f6f8fc;
+        color: #1b2230;
+        font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      main {
+        max-width: 46rem;
+        margin: 0 auto;
+        padding: 3rem 1.25rem 5rem;
+      }
+      h1 {
+        margin-bottom: 0.25rem;
+        font-size: 1.9rem;
+      }
+      h2 {
+        margin-top: 2.5rem;
+        font-size: 1.15rem;
+      }
+      .toolbar {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        margin-top: 1.5rem;
+      }
+      .toolbar select {
+        padding: 0.4rem 0.6rem;
+        border: 1px solid #d8dee9;
+        border-radius: 6px;
+        background: #fff;
+        font: inherit;
+      }
+      .glossary {
+        padding: 1rem 1.2rem;
+        border: 1px solid #d8dee9;
+        border-radius: 10px;
+        background: #fff;
+      }
+      .glossary p {
+        margin: 0 0 0.8rem;
+      }
+      .glossary p:last-child {
+        margin-bottom: 0;
+      }
+      .help-list {
+        display: grid;
+        gap: 0.75rem;
+      }
+      .note {
+        margin-top: 2rem;
+        color: #4c566a;
+        font-size: 0.875rem;
+      }
+      @media (prefers-color-scheme: dark) {
+        body { background: #0d121c; color: #f1f5f9; }
+        .toolbar select, .glossary { background: #141a26; border-color: #3a465c; color: inherit; }
+        .note { color: #b8c2d4; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>DeFi terms, without the jargon</h1>
+      <p>Hover, focus or tap a <strong>?</strong> for a quick definition. Use <strong>Learn more</strong> for the full explanation.</p>
+
+      <div class="toolbar">
+        <label for="locale">Help language</label>
+        <select id="locale" aria-label="Help language"></select>
+      </div>
+
+      <h2>Quick definitions</h2>
+      <div class="glossary">
+        <p>
+          Lenders earn <ndi-tooltip term="apr"></ndi-tooltip> or
+          <ndi-tooltip term="apy"></ndi-tooltip>, while borrowers pledge
+          <ndi-tooltip term="collateral"></ndi-tooltip> and watch their
+          <ndi-tooltip term="healthFactor"></ndi-tooltip>.
+        </p>
+        <p>
+          A pool's <ndi-tooltip term="utilizationRate"></ndi-tooltip> moves rates,
+          prices come from an <ndi-tooltip term="oracle"></ndi-tooltip>, and
+          deposits are tracked with <ndi-tooltip term="vaultShares"></ndi-tooltip>.
+        </p>
+      </div>
+
+      <h2>Learn more</h2>
+      <div class="help-list">
+        <ndi-inline-help term="collateralFactor"></ndi-inline-help>
+        <ndi-inline-help term="healthFactor"></ndi-inline-help>
+        <ndi-inline-help term="liquidation"></ndi-inline-help>
+        <ndi-inline-help term="staking"></ndi-inline-help>
+      </div>
+
+      <p class="note">
+        Definitions explain each concept in general. Check the protocol docs to see
+        which features are live in the current Ndi-Fi contracts.
+      </p>
+    </main>
+
+    <script type="module">
+      import './src/help-components.js';
+      import { listLocales, setActiveLocale } from './src/help-content.js';
+
+      const select = document.getElementById('locale');
+      for (const { code, name } of listLocales()) {
+        const option = document.createElement('option');
+        option.value = code;
+        option.textContent = name;
+        select.append(option);
+      }
+
+      select.addEventListener('change', () => {
+        const code = setActiveLocale(select.value);
+        document.documentElement.lang = code;
+        for (const element of document.querySelectorAll('ndi-tooltip, ndi-inline-help')) {
+          element.setAttribute('locale', code);
+        }
+      });
+    </script>
+  </body>
+</html>

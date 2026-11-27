@@ -45,6 +45,7 @@ stellar contract build
 
 ## Resources
 
+- [docs/ONBOARDING.md](../../docs/ONBOARDING.md)
 - [docs/stellar/ARCHITECTURE.md](../../docs/stellar/ARCHITECTURE.md)
 - [docs/stellar/MIGRATION.md](../../docs/stellar/MIGRATION.md)
 - [CONTRIBUTING.md](../../CONTRIBUTING.md)

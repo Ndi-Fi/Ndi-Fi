@@ -1,0 +1,99 @@
+name: Wasm Digest
+
+on:
+  push:
+    paths:
+      - "stellar/**"
+      - ".github/workflows/wasm-digest.yml"
+  pull_request:
+    paths:
+      - "stellar/**"
+      - ".github/workflows/wasm-digest.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  STELLAR_CLI_VERSION: "28.1.0"
+
+defaults:
+  run:
+    working-directory: stellar
+
+jobs:
+  digest:
+    name: Build and record wasm digests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        run: |
+          rustup toolchain install
+          rustc --version
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            stellar/target
+          key: stellar-${{ runner.os }}-${{ hashFiles('stellar/Cargo.lock', 'stellar/rust-toolchain.toml') }}
+          restore-keys: stellar-${{ runner.os }}-
+
+      - name: Install Stellar CLI
+        run: |
+          curl -sSfL -o /tmp/stellar-cli.tar.gz \
+            "https://github.com/stellar/stellar-cli/releases/download/v${STELLAR_CLI_VERSION}/stellar-cli-${STELLAR_CLI_VERSION}-x86_64-unknown-linux-gnu.tar.gz"
+          mkdir -p "$HOME/.local/bin"
+          tar -xzf /tmp/stellar-cli.tar.gz -C "$HOME/.local/bin" stellar
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Build contracts
+        run: stellar contract build
+
+      - name: Compute sha256 digests
+        id: digests
+        run: |
+          DIGEST_FILE="../deployments/wasm-digests.txt"
+          mkdir -p ../deployments
+          > "$DIGEST_FILE"
+          for c in ndi_token ndi_lending ndi_staking; do
+            WASM="target/wasm32v1-none/release/${c}.wasm"
+            DIGEST=$(sha256sum "$WASM" | awk '{print $1}')
+            echo "${c}: ${DIGEST}" | tee -a "$DIGEST_FILE"
+          done
+          echo "digest_file=$DIGEST_FILE" >> "$GITHUB_OUTPUT"
+
+      - name: Compare against previously published digests
+        run: |
+          DIGEST_FILE="../deployments/wasm-digests.txt"
+          PREV_FILE="../deployments/wasm-digests-prev.txt"
+          if [ -f "$PREV_FILE" ]; then
+            echo "=== Digest comparison ==="
+            diff "$PREV_FILE" "$DIGEST_FILE" && echo "No changes." || echo "Digests changed (see diff above)."
+          else
+            echo "No previous digest file found; this is the first run."
+          fi
+
+      - name: Upload wasm artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: wasm-${{ github.sha }}
+          path: |
+            stellar/target/wasm32v1-none/release/*.wasm
+            deployments/wasm-digests.txt
+          retention-days: 90
+
+      - name: Commit updated digests (push to main only)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          cd ..
+          cp deployments/wasm-digests.txt deployments/wasm-digests-prev.txt
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add deployments/wasm-digests.txt deployments/wasm-digests-prev.txt
+          git diff --cached --quiet || git commit -m "ci(stellar): update wasm digests [skip ci]"
+          git push

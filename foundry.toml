@@ -4,3 +4,9 @@ out = "out"
 libs = ["lib"]
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
+
+[doc]
+out = "docs/reference/solidity"
+title = "Ndi-Fi Solidity API Reference"
+homepage = "docs/SOLIDITY_API.md"
+repository = "https://github.com/adams813/Ndi-Fi"

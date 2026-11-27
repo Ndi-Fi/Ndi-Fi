@@ -1,0 +1,272 @@
+/**
+ * Ndi-Fi design tokens as CSS custom properties.
+ *
+ * Strategy: each theme-aware value is defined twice — once for light, once for
+ * dark — as a "source" variable (`--ndi-color-light-*` / `--ndi-color-dark-*`).
+ * The active, theme-aware variables (`--ndi-color-*`) point to the light
+ * source by default and are re-pointed to the dark source in dark mode. This
+ * keeps every raw value in exactly one place while still supporting both
+ * automatic (`prefers-color-scheme`) and manual (`[data-theme]`) theming.
+ *
+ * To use: link this stylesheet once, then consume the `--ndi-*` variables.
+ *   <link rel="stylesheet" href="./design-tokens/tokens.css">
+ *
+ * Manual theme override (overrides the system preference):
+ *   <html data-theme="dark">   <!-- force dark -->
+ *   <html data-theme="light">   <!-- force light -->
+ *
+ * This file is hand-kept in sync with `tokens.js`; `tokens.test.js` asserts the
+ * two stay aligned, so editing one without the other fails the test.
+ */
+
+:root {
+  /* ---- Source palettes (defined once; never consumed directly) ---- */
+
+  --ndi-color-light-background: #f6f8fc;
+  --ndi-color-dark-background: #0d121c;
+
+  --ndi-color-light-surface: #ffffff;
+  --ndi-color-dark-surface: #141a26;
+
+  --ndi-color-light-surface-raised: #ffffff;
+  --ndi-color-dark-surface-raised: #1c2433;
+
+  --ndi-color-light-surface-muted: #eef2f9;
+  --ndi-color-dark-surface-muted: #1e2a3a;
+
+  --ndi-color-light-foreground: #1b2230;
+  --ndi-color-dark-foreground: #f1f5f9;
+
+  --ndi-color-light-muted: #4c566a;
+  --ndi-color-dark-muted: #b8c2d4;
+
+  --ndi-color-light-border: #d8dee9;
+  --ndi-color-dark-border: #3a465c;
+
+  --ndi-color-light-primary: #3457d5;
+  --ndi-color-dark-primary: #7c93f5;
+  --ndi-color-light-primary-contrast: #ffffff;
+  --ndi-color-dark-primary-contrast: #0d121c;
+  --ndi-color-light-primary-soft: #eef2ff;
+  --ndi-color-dark-primary-soft: #1e2a49;
+
+  --ndi-color-light-secondary: #475569;
+  --ndi-color-dark-secondary: #cbd5e1;
+  --ndi-color-light-secondary-contrast: #ffffff;
+  --ndi-color-dark-secondary-contrast: #0d121c;
+  --ndi-color-light-secondary-soft: #e2e8f0;
+  --ndi-color-dark-secondary-soft: #334155;
+
+  --ndi-color-light-danger: #dc2626;
+  --ndi-color-dark-danger: #f87171;
+  --ndi-color-light-danger-contrast: #ffffff;
+  --ndi-color-dark-danger-contrast: #0d121c;
+  --ndi-color-light-danger-soft: #fee2e2;
+  --ndi-color-dark-danger-soft: #3a1d1d;
+
+  --ndi-color-light-success: #16a34a;
+  --ndi-color-dark-success: #4ade80;
+  --ndi-color-light-success-contrast: #ffffff;
+  --ndi-color-dark-success-contrast: #0d121c;
+  --ndi-color-light-success-soft: #dcfce7;
+  --ndi-color-dark-success-soft: #14351f;
+
+  --ndi-color-light-warning: #d97706;
+  --ndi-color-dark-warning: #fbbf24;
+  --ndi-color-light-warning-contrast: #ffffff;
+  --ndi-color-dark-warning-contrast: #0d121c;
+  --ndi-color-light-warning-soft: #fef3c7;
+  --ndi-color-dark-warning-soft: #3a2e0e;
+
+  --ndi-color-light-info: #0284c7;
+  --ndi-color-dark-info: #38bdf8;
+  --ndi-color-light-info-contrast: #ffffff;
+  --ndi-color-dark-info-contrast: #0d121c;
+  --ndi-color-light-info-soft: #e0f2fe;
+  --ndi-color-dark-info-soft: #0c2a3a;
+
+  --ndi-color-light-accent: #3457d5;
+  --ndi-color-dark-accent: #9db4ff;
+  --ndi-color-light-focus-ring: rgba(52, 87, 213, 0.5);
+  --ndi-color-dark-focus-ring: rgba(157, 180, 255, 0.55);
+
+  /* ---- Shadow sources ---- */
+
+  --ndi-shadow-light-none: none;
+  --ndi-shadow-dark-none: none;
+  --ndi-shadow-light-sm: 0 1px 2px rgba(15, 23, 42, 0.08);
+  --ndi-shadow-dark-sm: 0 1px 2px rgba(0, 0, 0, 0.40);
+  --ndi-shadow-light-md: 0 4px 12px rgba(15, 23, 42, 0.10);
+  --ndi-shadow-dark-md: 0 4px 12px rgba(0, 0, 0, 0.50);
+  --ndi-shadow-light-lg: 0 10px 30px rgba(15, 23, 42, 0.14);
+  --ndi-shadow-dark-lg: 0 10px 30px rgba(0, 0, 0, 0.60);
+  --ndi-shadow-light-xl: 0 20px 50px rgba(15, 23, 42, 0.18);
+  --ndi-shadow-dark-xl: 0 20px 50px rgba(0, 0, 0, 0.70);
+
+  /* ---- Static tokens (identical in light and dark) ---- */
+
+  --ndi-space-0: 0;
+  --ndi-space-1: 0.25rem;
+  --ndi-space-2: 0.5rem;
+  --ndi-space-3: 0.75rem;
+  --ndi-space-4: 1rem;
+  --ndi-space-5: 1.5rem;
+  --ndi-space-6: 2rem;
+  --ndi-space-8: 3rem;
+  --ndi-space-10: 4rem;
+  --ndi-space-12: 6rem;
+  --ndi-space-16: 8rem;
+
+  --ndi-radius-none: 0;
+  --ndi-radius-sm: 4px;
+  --ndi-radius-md: 8px;
+  --ndi-radius-lg: 12px;
+  --ndi-radius-xl: 16px;
+  --ndi-radius-full: 9999px;
+  --ndi-radius: var(--ndi-radius-md); /* convenience default */
+
+  --ndi-font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --ndi-font-mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+
+  --ndi-text-xs: 0.75rem;
+  --ndi-text-sm: 0.875rem;
+  --ndi-text-md: 1rem;
+  --ndi-text-lg: 1.125rem;
+  --ndi-text-xl: 1.25rem;
+  --ndi-text-2xl: 1.5rem;
+  --ndi-text-3xl: 1.875rem;
+
+  --ndi-weight-normal: 400;
+  --ndi-weight-medium: 500;
+  --ndi-weight-semibold: 600;
+  --ndi-weight-bold: 700;
+
+  --ndi-leading-tight: 1.2;
+  --ndi-leading-normal: 1.5;
+  --ndi-leading-relaxed: 1.65;
+
+  /* ---- Active theme tokens (default: light) ---- */
+
+  --ndi-color-background: var(--ndi-color-light-background);
+  --ndi-color-surface: var(--ndi-color-light-surface);
+  --ndi-color-surface-raised: var(--ndi-color-light-surface-raised);
+  --ndi-color-surface-muted: var(--ndi-color-light-surface-muted);
+  --ndi-color-foreground: var(--ndi-color-light-foreground);
+  --ndi-color-muted: var(--ndi-color-light-muted);
+  --ndi-color-border: var(--ndi-color-light-border);
+  --ndi-color-primary: var(--ndi-color-light-primary);
+  --ndi-color-primary-contrast: var(--ndi-color-light-primary-contrast);
+  --ndi-color-primary-soft: var(--ndi-color-light-primary-soft);
+  --ndi-color-secondary: var(--ndi-color-light-secondary);
+  --ndi-color-secondary-contrast: var(--ndi-color-light-secondary-contrast);
+  --ndi-color-secondary-soft: var(--ndi-color-light-secondary-soft);
+  --ndi-color-danger: var(--ndi-color-light-danger);
+  --ndi-color-danger-contrast: var(--ndi-color-light-danger-contrast);
+  --ndi-color-danger-soft: var(--ndi-color-light-danger-soft);
+  --ndi-color-success: var(--ndi-color-light-success);
+  --ndi-color-success-contrast: var(--ndi-color-light-success-contrast);
+  --ndi-color-success-soft: var(--ndi-color-light-success-soft);
+  --ndi-color-warning: var(--ndi-color-light-warning);
+  --ndi-color-warning-contrast: var(--ndi-color-light-warning-contrast);
+  --ndi-color-warning-soft: var(--ndi-color-light-warning-soft);
+  --ndi-color-info: var(--ndi-color-light-info);
+  --ndi-color-info-contrast: var(--ndi-color-light-info-contrast);
+  --ndi-color-info-soft: var(--ndi-color-light-info-soft);
+  --ndi-color-accent: var(--ndi-color-light-accent);
+  --ndi-color-focus-ring: var(--ndi-color-light-focus-ring);
+
+  --ndi-shadow-none: var(--ndi-shadow-light-none);
+  --ndi-shadow-sm: var(--ndi-shadow-light-sm);
+  --ndi-shadow-md: var(--ndi-shadow-light-md);
+  --ndi-shadow-lg: var(--ndi-shadow-light-lg);
+  --ndi-shadow-xl: var(--ndi-shadow-light-xl);
+
+  color-scheme: light;
+}
+
+/* ---- Automatic dark mode (only when no explicit theme is set) ---- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --ndi-color-background: var(--ndi-color-dark-background);
+    --ndi-color-surface: var(--ndi-color-dark-surface);
+    --ndi-color-surface-raised: var(--ndi-color-dark-surface-raised);
+    --ndi-color-surface-muted: var(--ndi-color-dark-surface-muted);
+    --ndi-color-foreground: var(--ndi-color-dark-foreground);
+    --ndi-color-muted: var(--ndi-color-dark-muted);
+    --ndi-color-border: var(--ndi-color-dark-border);
+    --ndi-color-primary: var(--ndi-color-dark-primary);
+    --ndi-color-primary-contrast: var(--ndi-color-dark-primary-contrast);
+    --ndi-color-primary-soft: var(--ndi-color-dark-primary-soft);
+    --ndi-color-secondary: var(--ndi-color-dark-secondary);
+    --ndi-color-secondary-contrast: var(--ndi-color-dark-secondary-contrast);
+    --ndi-color-secondary-soft: var(--ndi-color-dark-secondary-soft);
+    --ndi-color-danger: var(--ndi-color-dark-danger);
+    --ndi-color-danger-contrast: var(--ndi-color-dark-danger-contrast);
+    --ndi-color-danger-soft: var(--ndi-color-dark-danger-soft);
+    --ndi-color-success: var(--ndi-color-dark-success);
+    --ndi-color-success-contrast: var(--ndi-color-dark-success-contrast);
+    --ndi-color-success-soft: var(--ndi-color-dark-success-soft);
+    --ndi-color-warning: var(--ndi-color-dark-warning);
+    --ndi-color-warning-contrast: var(--ndi-color-dark-warning-contrast);
+    --ndi-color-warning-soft: var(--ndi-color-dark-warning-soft);
+    --ndi-color-info: var(--ndi-color-dark-info);
+    --ndi-color-info-contrast: var(--ndi-color-dark-info-contrast);
+    --ndi-color-info-soft: var(--ndi-color-dark-info-soft);
+    --ndi-color-accent: var(--ndi-color-dark-accent);
+    --ndi-color-focus-ring: var(--ndi-color-dark-focus-ring);
+
+    --ndi-shadow-none: var(--ndi-shadow-dark-none);
+    --ndi-shadow-sm: var(--ndi-shadow-dark-sm);
+    --ndi-shadow-md: var(--ndi-shadow-dark-md);
+    --ndi-shadow-lg: var(--ndi-shadow-dark-lg);
+    --ndi-shadow-xl: var(--ndi-shadow-dark-xl);
+
+    color-scheme: dark;
+  }
+}
+
+/* ---- Manual dark theme override ---- */
+:root[data-theme='dark'] {
+  --ndi-color-background: var(--ndi-color-dark-background);
+  --ndi-color-surface: var(--ndi-color-dark-surface);
+  --ndi-color-surface-raised: var(--ndi-color-dark-surface-raised);
+  --ndi-color-surface-muted: var(--ndi-color-dark-surface-muted);
+  --ndi-color-foreground: var(--ndi-color-dark-foreground);
+  --ndi-color-muted: var(--ndi-color-dark-muted);
+  --ndi-color-border: var(--ndi-color-dark-border);
+  --ndi-color-primary: var(--ndi-color-dark-primary);
+  --ndi-color-primary-contrast: var(--ndi-color-dark-primary-contrast);
+  --ndi-color-primary-soft: var(--ndi-color-dark-primary-soft);
+  --ndi-color-secondary: var(--ndi-color-dark-secondary);
+  --ndi-color-secondary-contrast: var(--ndi-color-dark-secondary-contrast);
+  --ndi-color-secondary-soft: var(--ndi-color-dark-secondary-soft);
+  --ndi-color-danger: var(--ndi-color-dark-danger);
+  --ndi-color-danger-contrast: var(--ndi-color-dark-danger-contrast);
+  --ndi-color-danger-soft: var(--ndi-color-dark-danger-soft);
+  --ndi-color-success: var(--ndi-color-dark-success);
+  --ndi-color-success-contrast: var(--ndi-color-dark-success-contrast);
+  --ndi-color-success-soft: var(--ndi-color-dark-success-soft);
+  --ndi-color-warning: var(--ndi-color-dark-warning);
+  --ndi-color-warning-contrast: var(--ndi-color-dark-warning-contrast);
+  --ndi-color-warning-soft: var(--ndi-color-dark-warning-soft);
+  --ndi-color-info: var(--ndi-color-dark-info);
+  --ndi-color-info-contrast: var(--ndi-color-dark-info-contrast);
+  --ndi-color-info-soft: var(--ndi-color-dark-info-soft);
+  --ndi-color-accent: var(--ndi-color-dark-accent);
+  --ndi-color-focus-ring: var(--ndi-color-dark-focus-ring);
+
+  --ndi-shadow-none: var(--ndi-shadow-dark-none);
+  --ndi-shadow-sm: var(--ndi-shadow-dark-sm);
+  --ndi-shadow-md: var(--ndi-shadow-dark-md);
+  --ndi-shadow-lg: var(--ndi-shadow-dark-lg);
+  --ndi-shadow-xl: var(--ndi-shadow-dark-xl);
+
+  color-scheme: dark;
+}
+
+/* ---- Manual light theme override (wins even when the system is dark) ---- */
+:root[data-theme='light'] {
+  /* The active tokens already default to the light source on :root, so this
+     block only needs to reset `color-scheme` for form controls and scrollbars. */
+  color-scheme: light;
+}

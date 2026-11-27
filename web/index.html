@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="ndi:version" content="unreleased" />
+    <meta name="ndi:network" content="testnet" />
+    <title>Ndi-Fi — component preview</title>
+    <!-- Single source of truth for visual tokens; inherited by all components. -->
+    <link rel="stylesheet" href="./design-tokens/tokens.css" />
+    <style>
+      :root {
+        --preview-pad: clamp(1rem, 4vw, 2.5rem);
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        background: var(--ndi-color-background);
+        color: var(--ndi-color-foreground);
+        font-family: var(--ndi-font-sans);
+        font-size: var(--ndi-text-md);
+        line-height: var(--ndi-leading-normal);
+      }
+      header,
+      main {
+        width: min(72rem, 100%);
+        margin-inline: auto;
+        padding: 1.5rem var(--preview-pad);
+      }
+      main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: var(--ndi-space-8);
+      }
+      h1 {
+        margin: 0 0 0.25rem;
+        font-size: var(--ndi-text-2xl);
+      }
+      h2 {
+        margin: 0 0 var(--ndi-space-3);
+        font-size: var(--ndi-text-lg);
+        font-weight: var(--ndi-weight-semibold);
+      }
+      p {
+        margin: 0 0 var(--ndi-space-3);
+        color: var(--ndi-color-muted);
+      }
+      .toolbar {
+        display: flex;
+        align-items: center;
+        gap: var(--ndi-space-3);
+        flex-wrap: wrap;
+      }
+      .toolbar label {
+        color: var(--ndi-color-muted);
+        font-size: var(--ndi-text-sm);
+      }
+      .card {
+        padding: var(--ndi-space-5);
+        border: 1px solid var(--ndi-color-border);
+        border-radius: var(--ndi-radius-lg);
+        background: var(--ndi-color-surface);
+        box-shadow: var(--ndi-shadow-sm);
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--ndi-space-3);
+      }
+      .stack {
+        display: flex;
+        flex-direction: column;
+        gap: var(--ndi-space-3);
+      }
+      .label {
+        color: var(--ndi-color-muted);
+        font-size: var(--ndi-text-sm);
+        min-width: 5rem;
+      }
+      code {
+        padding: 0.1rem 0.35rem;
+        border-radius: var(--ndi-radius-sm);
+        background: var(--ndi-color-surface-muted);
+        font-family: var(--ndi-font-mono);
+        font-size: 0.85em;
+      }
+      .swatches {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
+        gap: var(--ndi-space-2);
+      }
+      .swatch {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        padding: var(--ndi-space-3);
+        border-radius: var(--ndi-radius-md);
+        border: 1px solid var(--ndi-color-border);
+      }
+      .swatch i {
+        height: 2.25rem;
+        border-radius: var(--ndi-radius-sm);
+        border: 1px solid var(--ndi-color-border);
+      }
+      .swatch span {
+        font-family: var(--ndi-font-mono);
+        font-size: var(--ndi-text-xs);
+        color: var(--ndi-color-muted);
+      }
+      .grid-2 {
+        display: grid;
+        gap: var(--ndi-space-4);
+        grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+      }
+      @media (prefers-color-scheme: dark) {
+        /* tokens.css already handles colours; this keeps the page tidy. */
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <strong>Ndi-Fi</strong> · design system preview
+      <div class="toolbar" style="margin-top: 1rem">
+        <label for="theme">Theme</label>
+        <select id="theme" aria-label="Color theme">
+          <option value="auto">Auto</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+      </div>
+    </header>
+
+    <main>
+      <section class="card">
+        <h1>Ndi-Fi design system</h1>
+        <p>
+          One source of truth for colour, spacing, radius, shadow and typography tokens, exposed as
+          CSS variables and a Tailwind theme. Toggle the theme above — every component below follows
+          automatically.
+        </p>
+        <div class="swatches" aria-hidden="true">
+          <div class="swatch"><i style="background: var(--ndi-color-primary)"></i><span>primary</span></div>
+          <div class="swatch"><i style="background: var(--ndi-color-secondary)"></i><span>secondary</span></div>
+          <div class="swatch"><i style="background: var(--ndi-color-danger)"></i><span>danger</span></div>
+          <div class="swatch"><i style="background: var(--ndi-color-success)"></i><span>success</span></div>
+          <div class="swatch"><i style="background: var(--ndi-color-warning)"></i><span>warning</span></div>
+          <div class="swatch"><i style="background: var(--ndi-color-info)"></i><span>info</span></div>
+          <div class="swatch"><i style="background: var(--ndi-color-surface)"></i><span>surface</span></div>
+          <div class="swatch"><i style="background: var(--ndi-color-surface-muted)"></i><span>surface-muted</span></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Buttons</h2>
+        <div class="stack">
+          <div class="row">
+            <span class="label">Variants</span>
+            <ndi-button variant="primary">Primary</ndi-button>
+            <ndi-button variant="secondary">Secondary</ndi-button>
+            <ndi-button variant="ghost">Ghost</ndi-button>
+            <ndi-button variant="danger">Danger</ndi-button>
+          </div>
+          <div class="row">
+            <span class="label">Sizes</span>
+            <ndi-button size="sm">Small</ndi-button>
+            <ndi-button size="md">Medium</ndi-button>
+            <ndi-button size="lg">Large</ndi-button>
+          </div>
+          <div class="row">
+            <span class="label">States</span>
+            <ndi-button loading>Submitting…</ndi-button>
+            <ndi-button disabled>Disabled</ndi-button>
+            <ndi-button variant="danger" loading>Cancelling…</ndi-button>
+          </div>
+          <div class="row">
+            <span class="label">Icons</span>
+            <ndi-button variant="secondary">
+              <svg slot="leading" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                <path d="M8 3v10M3 8h10" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" />
+              </svg>
+              Deposit
+            </ndi-button>
+            <ndi-button variant="ghost">
+              Continue
+              <svg slot="trailing" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                <path d="M5 4l5 4-5 4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </ndi-button>
+          </div>
+          <div class="row">
+            <span class="label">Full width</span>
+            <ndi-button variant="primary" full-width>Connect wallet</ndi-button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Protocol notice banner</h2>
+        <p>Dismiss a notice and reload the page — it stays dismissed (per notice id, persisted in localStorage).</p>
+        <ndi-notice-banner id="notices">
+          <script type="application/json" data-notice-config>
+            {
+              "notices": [
+                {
+                  "id": "pause-2026-11",
+                  "severity": "critical",
+                  "title": "Protocol paused",
+                  "body": "Withdrawals are temporarily halted during an upgrade.",
+                  "href": "https://example.com/status",
+                  "hrefLabel": "Status page"
+                },
+                {
+                  "id": "rate-update",
+                  "severity": "warning",
+                  "title": "Interest rate model updated",
+                  "body": "Borrow APY may change for new loans."
+                },
+                {
+                  "id": "welcome",
+                  "severity": "info",
+                  "title": "Welcome to Ndi-Fi",
+                  "body": "Review the docs before your first deposit."
+                }
+              ]
+            }
+          </script>
+        </ndi-notice-banner>
+      </section>
+
+      <section class="card">
+        <h2>Optimistic UI</h2>
+        <p>
+          A state module, not a visual one — try the buttons below to see a submitted transaction
+          reflected immediately, then reconciled or rolled back. The live balances update without
+          waiting for the chain.
+        </p>
+        <div class="grid-2">
+          <div>
+            <div class="row">
+              <span class="label">DAI</span>
+              <strong id="dai-balance">100.000000</strong>
+            </div>
+            <div class="row" style="margin-top: var(--ndi-space-3)">
+              <ndi-button variant="primary" id="btn-deposit">+ Deposit 10</ndi-button>
+              <ndi-button variant="secondary" id="btn-withdraw">− Withdraw 10</ndi-button>
+              <ndi-button variant="ghost" id="btn-fail">Fail last</ndi-button>
+            </div>
+          </div>
+          <div>
+            <span class="label">Log</span>
+            <pre id="tx-log" style="margin: 0; font-family: var(--ndi-font-mono); font-size: var(--ndi-text-xs); color: var(--ndi-color-muted)"></pre>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <ndi-footer base-url="../"></ndi-footer>
+
+    <script type="module" src="./components/footer/ndi-footer.js"></script>
+    <script type="module" src="./components/button/ndi-button.js"></script>
+    <script type="module" src="./components/notice-banner/ndi-notice-banner.js"></script>
+    <script type="module">
+      import { OptimisticStore } from './components/optimistic/optimistic-store.js';
+
+      // ---- Theme toggle -------------------------------------------------
+      const select = document.getElementById('theme');
+      select.value = 'auto';
+      select.addEventListener('change', () => {
+        const value = select.value;
+        document.documentElement.removeAttribute('data-theme');
+        if (value === 'light' || value === 'dark') {
+          document.documentElement.setAttribute('data-theme', value);
+        }
+      });
+
+      // ---- Optimistic demo ---------------------------------------------
+      const daiEl = document.getElementById('dai-balance');
+      const logEl = document.getElementById('tx-log');
+      const DECIMALS = 1_000_000n;
+      let nonce = 0;
+      const lines = [];
+      const log = (msg) => {
+        lines.unshift(msg);
+        logEl.textContent = lines.slice(0, 6).join('\n');
+      };
+      const fmt = (wei) => `${(wei / DECIMALS)}.${(wei % DECIMALS).toString().padStart(6, '0').slice(0, 6)}`;
+
+      const store = new OptimisticStore({
+        refetch: async () => {
+          // Simulate the chain reflecting all confirmed deposits/withdrawals.
+          // (In a real app this fetches from the RPC.)
+          return { balances: { DAI: confirmedBase } };
+        },
+      });
+      let confirmedBase = 100n * DECIMALS;
+      store.setBaseState({ balances: { DAI: confirmedBase } });
+
+      const render = (state) => {
+        daiEl.textContent = fmt(state.balances.get('DAI') ?? 0n);
+      };
+      render(store.getOptimisticState());
+      store.subscribe(render);
+
+      document.getElementById('btn-deposit').addEventListener('click', async (e) => {
+        const key = `deposit-${++nonce}`;
+        store.submit(key, { balances: { DAI: 10n * DECIMALS } });
+        log(`submit ${key} (+10) → optimistic ${fmt(store.getOptimisticState().balances.get('DAI'))}`);
+        e.target.setAttribute('loading', '');
+        try {
+          await new Promise((r) => setTimeout(r, 800));
+          confirmedBase += 10n * DECIMALS;
+          await store.confirm(key);
+          log(`confirm ${key} → confirmed ${fmt(store.getOptimisticState().balances.get('DAI'))}`);
+        } catch {
+          store.fail(key);
+          log(`fail ${key} → rolled back`);
+        } finally {
+          e.target.removeAttribute('loading');
+        }
+      });
+
+      document.getElementById('btn-withdraw').addEventListener('click', async (e) => {
+        const key = `withdraw-${++nonce}`;
+        store.submit(key, { balances: { DAI: -10n * DECIMALS } });
+        log(`submit ${key} (−10) → optimistic ${fmt(store.getOptimisticState().balances.get('DAI'))}`);
+        e.target.setAttribute('loading', '');
+        try {
+          await new Promise((r) => setTimeout(r, 800));
+          confirmedBase -= 10n * DECIMALS;
+          await store.confirm(key);
+          log(`confirm ${key} → confirmed ${fmt(store.getOptimisticState().balances.get('DAI'))}`);
+        } catch {
+          store.fail(key);
+          log(`fail ${key} → rolled back`);
+        } finally {
+          e.target.removeAttribute('loading');
+        }
+      });
+
+      document.getElementById('btn-fail').addEventListener('click', () => {
+        const pending = store.getPending().filter((t) => t.status === 'pending');
+        if (!pending.length) {
+          log('no pending tx to fail');
+          return;
+        }
+        const last = pending[pending.length - 1].key;
+        store.fail(last);
+        log(`fail ${last} → rolled back to ${fmt(store.getOptimisticState().balances.get('DAI'))}`);
+      });
+    </script>
+  </body>
+</html>

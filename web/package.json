@@ -1,0 +1,11 @@
+{
+  "name": "ndi-fi-web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared, framework-agnostic UI pieces for Ndi-Fi",
+  "scripts": {
+    "test": "node --test",
+    "validate:env": "node scripts/validate-env.js"
+  }
+}

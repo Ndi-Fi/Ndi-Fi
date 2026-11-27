@@ -1,0 +1,33 @@
+# CODEOWNERS – Issue #223
+#
+# GitHub uses the LAST matching rule for a file, so more-specific rules must
+# come AFTER broader ones.  Every path listed here requires a review from at
+# least one member of the named team before a PR can be merged.
+#
+# Keep this file current as the team grows.  When a maintainer leaves, update
+# their entry immediately so reviews are never silently unrouted.
+# See CONTRIBUTING.md for how this file relates to branch protection.
+
+# ── Fallback: core maintainers review everything not matched below ─────────
+*                               @Ndi-Fi/maintainers
+
+# ── Solidity / EVM stack ──────────────────────────────────────────────────
+/src/                           @Ndi-Fi/solidity-reviewers
+/test/                          @Ndi-Fi/solidity-reviewers
+/script/                        @Ndi-Fi/solidity-reviewers
+/lib/                           @Ndi-Fi/solidity-reviewers
+foundry.toml                    @Ndi-Fi/solidity-reviewers
+remappings.txt                  @Ndi-Fi/solidity-reviewers
+
+# ── Stellar / Soroban stack ───────────────────────────────────────────────
+/stellar/                       @Ndi-Fi/stellar-reviewers
+
+# ── Frontend (not yet in repo; placeholder for apps/web) ─────────────────
+/apps/web/                      @Ndi-Fi/frontend-reviewers
+
+# ── Documentation ─────────────────────────────────────────────────────────
+/docs/                          @Ndi-Fi/maintainers
+*.md                            @Ndi-Fi/maintainers
+
+# ── CI / DevOps ───────────────────────────────────────────────────────────
+/.github/                       @Ndi-Fi/maintainers

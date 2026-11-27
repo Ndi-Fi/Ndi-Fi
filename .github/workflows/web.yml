@@ -1,8 +1,9 @@
 name: Web
 
 # Builds the web app and uploads its build output as an artifact.
-# The app is expected in one of WEB_DIR_CANDIDATES. Until one of those
-# directories has a package.json, the build job is skipped (not failed).
+# The app is expected in one of WEB_DIR_CANDIDATES (the first one with a
+# package.json wins). If package.json has no "build" script, the package is
+# treated as static and its files are uploaded as-is.
 
 on:
   push:
@@ -54,7 +55,18 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
+      - name: Check for a build script
+        id: kind
+        run: |
+          if node -e 'process.exit(require("./package.json").scripts?.build ? 0 : 1)'; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No build script in package.json: uploading the static files as-is."
+            echo "build=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Install dependencies
+        if: steps.kind.outputs.build == 'true'
         run: |
           if [ -f pnpm-lock.yaml ]; then corepack enable && pnpm install --frozen-lockfile
           elif [ -f yarn.lock ]; then corepack enable && yarn install --frozen-lockfile
@@ -63,14 +75,23 @@ jobs:
           fi
 
       - name: Build
+        if: steps.kind.outputs.build == 'true'
         run: npm run build
 
       - name: Locate build output
         id: out
+        env:
+          WEB_DIR: ${{ needs.detect.outputs.dir }}
+          HAS_BUILD: ${{ steps.kind.outputs.build }}
         run: |
+          if [ "$HAS_BUILD" != true ]; then
+            # Static package: ship the directory itself, minus tests and deps.
+            echo "path=${WEB_DIR}/" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           for d in dist build out .next; do
             if [ -d "$d" ]; then
-              echo "path=${{ needs.detect.outputs.dir }}/$d" >> "$GITHUB_OUTPUT"
+              echo "path=${WEB_DIR}/$d" >> "$GITHUB_OUTPUT"
               exit 0
             fi
           done
@@ -81,6 +102,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: web-build-${{ github.sha }}
-          path: ${{ steps.out.outputs.path }}
+          path: |
+            ${{ steps.out.outputs.path }}
+            !${{ needs.detect.outputs.dir }}/node_modules/**
+            !${{ needs.detect.outputs.dir }}/test/**
+            !${{ needs.detect.outputs.dir }}/**/*.test.js
           if-no-files-found: error
           retention-days: ${{ env.ARTIFACT_RETENTION_DAYS }}

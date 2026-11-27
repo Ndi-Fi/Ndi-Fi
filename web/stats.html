@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="ndi:version" content="unreleased" />
+    <meta name="ndi:network" content="testnet" />
+    <!-- Open Graph / shareable card — issue #149 -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ndi-Fi Protocol Stats" />
+    <meta property="og:description" content="Live TVL, total borrows, total staked, and APR for the Ndi-Fi DeFi protocol." />
+    <meta property="og:image" content="./og-stats.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Ndi-Fi Protocol Stats" />
+    <meta name="twitter:description" content="TVL · Borrows · Staked · APR — Ndi-Fi protocol health at a glance." />
+    <title>Ndi-Fi — Protocol Stats</title>
+    <link rel="stylesheet" href="./stats.css" />
+  </head>
+  <body>
+    <header class="stats-header">
+      <a class="stats-header__logo" href="./">
+        <span aria-hidden="true">◈</span> Ndi-Fi
+      </a>
+      <span class="stats-header__network" id="network-badge" data-status="loading">
+        — testnet
+      </span>
+    </header>
+
+    <main class="stats-main">
+      <section class="stats-hero" aria-labelledby="stats-heading">
+        <h1 id="stats-heading" class="stats-hero__title">Protocol Stats</h1>
+        <p class="stats-hero__sub">
+          Live health metrics for the Ndi-Fi lending and staking protocol.
+        </p>
+      </section>
+
+      <!-- ── Key Metrics Grid ─────────────────────────────────────── -->
+      <section class="stats-grid" aria-label="Key protocol metrics">
+
+        <article class="stat-card" id="card-tvl" aria-live="polite" aria-busy="true">
+          <h2 class="stat-card__label">Total Value Locked</h2>
+          <p class="stat-card__value" id="metric-tvl">
+            <span class="stat-card__skeleton" aria-hidden="true"></span>
+          </p>
+          <p class="stat-card__unit">USD</p>
+        </article>
+
+        <article class="stat-card" id="card-borrows" aria-live="polite" aria-busy="true">
+          <h2 class="stat-card__label">Total Borrows</h2>
+          <p class="stat-card__value" id="metric-borrows">
+            <span class="stat-card__skeleton" aria-hidden="true"></span>
+          </p>
+          <p class="stat-card__unit">USD</p>
+        </article>
+
+        <article class="stat-card" id="card-staked" aria-live="polite" aria-busy="true">
+          <h2 class="stat-card__label">Total Staked</h2>
+          <p class="stat-card__value" id="metric-staked">
+            <span class="stat-card__skeleton" aria-hidden="true"></span>
+          </p>
+          <p class="stat-card__unit">NDI</p>
+        </article>
+
+        <article class="stat-card stat-card--accent" id="card-apr" aria-live="polite" aria-busy="true">
+          <h2 class="stat-card__label">Supply APR</h2>
+          <p class="stat-card__value" id="metric-apr">
+            <span class="stat-card__skeleton" aria-hidden="true"></span>
+          </p>
+          <p class="stat-card__unit">% annualised</p>
+        </article>
+
+      </section>
+
+      <!-- ── Bar Charts ───────────────────────────────────────────── -->
+      <section class="stats-charts" aria-label="Utilisation charts">
+
+        <figure class="chart-block" id="chart-utilisation">
+          <figcaption class="chart-block__caption">
+            Utilisation Rate
+            <span class="chart-block__hint">Borrows ÷ TVL</span>
+          </figcaption>
+          <div class="chart-bar-track" role="img" aria-label="Utilisation rate bar chart">
+            <div class="chart-bar" id="bar-utilisation" style="width:0%">
+              <span class="chart-bar__label">—</span>
+            </div>
+          </div>
+          <div class="chart-axis">
+            <span>0 %</span><span>25 %</span><span>50 %</span><span>75 %</span><span>100 %</span>
+          </div>
+        </figure>
+
+        <figure class="chart-block" id="chart-collateral">
+          <figcaption class="chart-block__caption">
+            Collateral Factor
+            <span class="chart-block__hint">Max LTV allowed by protocol</span>
+          </figcaption>
+          <div class="chart-bar-track" role="img" aria-label="Collateral factor bar chart">
+            <div class="chart-bar chart-bar--secondary" id="bar-collateral" style="width:0%">
+              <span class="chart-bar__label">—</span>
+            </div>
+          </div>
+          <div class="chart-axis">
+            <span>0 %</span><span>25 %</span><span>50 %</span><span>75 %</span><span>100 %</span>
+          </div>
+        </figure>
+
+      </section>
+
+      <!-- ── Error / unavailable state ──────────────────────────── -->
+      <div class="stats-unavailable" id="stats-error" hidden aria-live="assertive">
+        <p class="stats-unavailable__icon" aria-hidden="true">⚠</p>
+        <p class="stats-unavailable__msg">
+          Protocol stats are temporarily unavailable.
+          Data will refresh automatically.
+        </p>
+        <button class="stats-unavailable__retry" id="btn-retry">Retry</button>
+      </div>
+
+      <!-- ── Share / copy link ───────────────────────────────────── -->
+      <div class="stats-share">
+        <button class="stats-share__btn" id="btn-share" aria-label="Copy stats page link">
+          <span aria-hidden="true">🔗</span> Share stats
+        </button>
+        <span class="stats-share__confirm" id="share-confirm" aria-live="polite" hidden>
+          Link copied!
+        </span>
+      </div>
+
+      <p class="stats-footer-note">
+        Stats are read from on-chain contract state and updated every 60 s.
+        Values are estimates; always verify on-chain.
+        <time id="stats-updated" datetime=""></time>
+      </p>
+    </main>
+
+    <ndi-footer base-url="./"></ndi-footer>
+
+    <script type="module" src="./stats.js"></script>
+    <script type="module" src="./components/footer/ndi-footer.js"></script>
+  </body>
+</html>

@@ -1,0 +1,236 @@
+/*
+ * Styles for <ndi-toast>.
+ *
+ * Follows the same custom-property and dark/light pattern as ndi-footer.css.
+ * All properties are prefixed --ndi-toast- so they never collide with the host
+ * page or other components.
+ */
+
+:host {
+  /* Colour tokens — dark theme (default) */
+  --ndi-toast-bg: #111b2e;
+  --ndi-toast-fg: #edf3ff;
+  --ndi-toast-muted: #aab8d0;
+  --ndi-toast-border: rgba(226, 236, 255, 0.16);
+  --ndi-toast-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --ndi-toast-close-hover-bg: rgba(255, 255, 255, 0.08);
+
+  /* Type accent colours */
+  --ndi-toast-color-info: #7dd3fc;
+  --ndi-toast-color-success: #4ade80;
+  --ndi-toast-color-warning: #fbbf24;
+  --ndi-toast-color-error: #f87171;
+
+  /* Geometry */
+  --ndi-toast-radius: 10px;
+  --ndi-toast-width: 22rem;
+  --ndi-toast-max-width: calc(100vw - 2rem);
+
+  /* Animation */
+  --ndi-toast-duration-in: 220ms;
+  --ndi-toast-duration-out: 180ms;
+  --ndi-toast-easing: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Required so the host takes no layout space of its own */
+  display: contents;
+}
+
+@media (prefers-color-scheme: light) {
+  :host {
+    --ndi-toast-bg: #ffffff;
+    --ndi-toast-fg: #132033;
+    --ndi-toast-muted: #4a5b74;
+    --ndi-toast-border: rgba(19, 32, 51, 0.16);
+    --ndi-toast-shadow: 0 8px 24px rgba(19, 32, 51, 0.18);
+    --ndi-toast-close-hover-bg: rgba(0, 0, 0, 0.06);
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* ─── Container ─────────────────────────────────────────────────────────────── */
+
+.ndi-toast__container {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  /* Honour iOS/Android safe areas so toasts clear the home-indicator bar */
+  padding-bottom: env(safe-area-inset-bottom, 1rem);
+  /* Keep toasts above modals and overlays */
+  z-index: 9000;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 0.625rem;
+  width: var(--ndi-toast-width);
+  max-width: var(--ndi-toast-max-width);
+  /* Pointer events only on actual toast cards */
+  pointer-events: none;
+}
+
+/* ─── Individual toast ───────────────────────────────────────────────────────── */
+
+.ndi-toast__item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: start;
+  gap: 0.5rem 0.75rem;
+  padding: 0.75rem 0.875rem;
+  background: var(--ndi-toast-bg);
+  color: var(--ndi-toast-fg);
+  border: 1px solid var(--ndi-toast-border);
+  border-left-width: 4px;
+  border-radius: var(--ndi-toast-radius);
+  box-shadow: var(--ndi-toast-shadow);
+  pointer-events: auto;
+  /* Enter animation — slide in from right */
+  animation: ndi-toast-enter var(--ndi-toast-duration-in) var(--ndi-toast-easing) both;
+}
+
+.ndi-toast__item[data-type="info"]    { border-left-color: var(--ndi-toast-color-info); }
+.ndi-toast__item[data-type="success"] { border-left-color: var(--ndi-toast-color-success); }
+.ndi-toast__item[data-type="warning"] { border-left-color: var(--ndi-toast-color-warning); }
+.ndi-toast__item[data-type="error"]   { border-left-color: var(--ndi-toast-color-error); }
+
+/* Exit state — applied by JS before removal */
+.ndi-toast__item[data-dismissing] {
+  animation: ndi-toast-exit var(--ndi-toast-duration-out) var(--ndi-toast-easing) both;
+}
+
+/* ─── Icon ───────────────────────────────────────────────────────────────────── */
+
+.ndi-toast__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+.ndi-toast__icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.ndi-toast__item[data-type="info"]    .ndi-toast__icon { color: var(--ndi-toast-color-info); }
+.ndi-toast__item[data-type="success"] .ndi-toast__icon { color: var(--ndi-toast-color-success); }
+.ndi-toast__item[data-type="warning"] .ndi-toast__icon { color: var(--ndi-toast-color-warning); }
+.ndi-toast__item[data-type="error"]   .ndi-toast__icon { color: var(--ndi-toast-color-error); }
+
+/* ─── Body ───────────────────────────────────────────────────────────────────── */
+
+.ndi-toast__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.ndi-toast__title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.4;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+.ndi-toast__message {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--ndi-toast-muted);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  word-break: break-word;
+}
+
+/* When there is no title, the message takes the primary text colour */
+.ndi-toast__item:not([data-has-title]) .ndi-toast__message {
+  color: var(--ndi-toast-fg);
+  font-size: 0.875rem;
+}
+
+/* ─── Close button ───────────────────────────────────────────────────────────── */
+
+.ndi-toast__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-top: -0.125rem;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ndi-toast-muted);
+  cursor: pointer;
+  font-size: 1.125rem;
+  line-height: 1;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.ndi-toast__close:hover {
+  background: var(--ndi-toast-close-hover-bg);
+  color: var(--ndi-toast-fg);
+}
+
+.ndi-toast__close:focus-visible {
+  outline: 2px solid var(--ndi-toast-color-info);
+  outline-offset: 2px;
+}
+
+/* ─── Keyframes ──────────────────────────────────────────────────────────────── */
+
+@keyframes ndi-toast-enter {
+  from {
+    opacity: 0;
+    transform: translateX(calc(var(--ndi-toast-width) + 2rem));
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes ndi-toast-exit {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+    max-height: 10rem;
+    margin-bottom: 0;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(calc(var(--ndi-toast-width) + 2rem));
+    max-height: 0;
+    margin-bottom: calc(-0.625rem);
+  }
+}
+
+/* ─── Reduced motion ─────────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .ndi-toast__item {
+    animation: ndi-toast-enter-reduced var(--ndi-toast-duration-in) ease both;
+  }
+
+  .ndi-toast__item[data-dismissing] {
+    animation: ndi-toast-exit-reduced var(--ndi-toast-duration-out) ease both;
+  }
+}
+
+@keyframes ndi-toast-enter-reduced {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes ndi-toast-exit-reduced {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}

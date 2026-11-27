@@ -5,25 +5,52 @@ import "./NdiPoint.sol";
 
 /**
  * @title NdiPointIntegrationExample
- * @dev Example contract showing how to integrate NdiPoint with other DeFi protocols
+ * @notice Demonstration of how other protocols can award NdiPoint rewards for activity.
  * @dev This is a demonstration contract for educational purposes
  */
 contract NdiPointIntegrationExample {
+    /// @notice NdiPoint token used to pay out rewards.
     NdiPoint public immutable ndiPoint;
+
+    /// @notice Account allowed to distribute weekly rewards and change the reward rate.
     address public owner;
 
     // Staking related variables
+    /// @notice Simulated staked balance by account.
     mapping(address => uint256) public stakedBalance;
+
+    /// @notice Timestamp of the last reward accounting update for an account.
     mapping(address => uint256) public lastRewardUpdate;
+
+    /// @notice Reward points paid per staked token per day.
     uint256 public rewardRate = 100; // 100 NDI points per day per token staked
 
     // Lending related variables
+    /// @notice Simulated lent amount by account.
     mapping(address => uint256) public lentAmount;
+
+    /// @notice Simulated borrowed amount by account.
     mapping(address => uint256) public borrowedAmount;
 
+    /// @notice Emitted when an account stakes in the example.
+    /// @param user Account that staked.
+    /// @param amount Amount staked.
     event Staked(address indexed user, uint256 amount);
+
+    /// @notice Emitted when an account unstakes from the example.
+    /// @param user Account that unstaked.
+    /// @param amount Amount unstaked.
     event Unstaked(address indexed user, uint256 amount);
+
+    /// @notice Emitted when staking rewards are claimed.
+    /// @param user Account that claimed rewards.
+    /// @param amount Amount of NdiPoint rewards claimed.
     event RewardsClaimed(address indexed user, uint256 amount);
+
+    /// @notice Emitted when a lending or borrowing activity is rewarded.
+    /// @param user Account that received the reward.
+    /// @param amount Amount of NdiPoint rewards paid.
+    /// @param activity Name of the activity that earned the reward.
     event LendingReward(address indexed user, uint256 amount, string activity);
 
     modifier onlyOwner() {
@@ -31,6 +58,8 @@ contract NdiPointIntegrationExample {
         _;
     }
 
+    /// @notice Deploys the example and sets the deployer as owner.
+    /// @param _ndiPoint Address of the NdiPoint token used for rewards.
     constructor(address _ndiPoint) {
         ndiPoint = NdiPoint(_ndiPoint);
         owner = msg.sender;
@@ -38,6 +67,7 @@ contract NdiPointIntegrationExample {
 
     /**
      * @dev Simulate staking tokens and earning NDI points
+     * @param amount Amount of tokens to stake
      */
     function stake(uint256 amount) external {
         require(amount > 0, "Amount must be greater than zero");
@@ -53,6 +83,7 @@ contract NdiPointIntegrationExample {
 
     /**
      * @dev Simulate unstaking tokens
+     * @param amount Amount of tokens to unstake
      */
     function unstake(uint256 amount) external {
         require(stakedBalance[msg.sender] >= amount, "Insufficient staked balance");
@@ -83,6 +114,7 @@ contract NdiPointIntegrationExample {
 
     /**
      * @dev Simulate lending activity and reward users
+     * @param amount Amount of tokens lent
      */
     function lend(uint256 amount) external {
         require(amount > 0, "Amount must be greater than zero");
@@ -99,6 +131,7 @@ contract NdiPointIntegrationExample {
 
     /**
      * @dev Simulate borrowing activity and reward users
+     * @param amount Amount of tokens borrowed
      */
     function borrow(uint256 amount) external {
         require(amount > 0, "Amount must be greater than zero");
@@ -115,6 +148,8 @@ contract NdiPointIntegrationExample {
 
     /**
      * @dev Batch reward distribution for multiple users (weekly distribution example)
+     * @param users Accounts receiving rewards
+     * @param amounts Amounts corresponding to each user
      */
     function distributeWeeklyRewards(address[] calldata users, uint256[] calldata amounts) external onlyOwner {
         require(users.length == amounts.length, "Array length mismatch");
@@ -124,6 +159,8 @@ contract NdiPointIntegrationExample {
 
     /**
      * @dev Calculate pending staking rewards for a user
+     * @param user Account whose rewards are queried
+     * @return Pending NdiPoint rewards for the account
      */
     function calculatePendingRewards(address user) public view returns (uint256) {
         if (stakedBalance[user] == 0) {
@@ -138,6 +175,7 @@ contract NdiPointIntegrationExample {
 
     /**
      * @dev Update reward calculation for a user
+     * @param user Account whose reward accounting is updated
      */
     function _updateRewards(address user) internal {
         if (stakedBalance[user] > 0) {
@@ -151,6 +189,12 @@ contract NdiPointIntegrationExample {
 
     /**
      * @dev Get user's total activity summary
+     * @param user Account whose activity is queried
+     * @return staked Simulated staked balance
+     * @return lent Simulated lent amount
+     * @return borrowed Simulated borrowed amount
+     * @return pendingRewards NdiPoint rewards currently claimable
+     * @return ndiBalance NdiPoint token balance of the account
      */
     function getUserActivitySummary(address user)
         external
@@ -166,6 +210,7 @@ contract NdiPointIntegrationExample {
 
     /**
      * @dev Update reward rate (only owner)
+     * @param newRate New number of reward points per staked token per day
      */
     function setRewardRate(uint256 newRate) external onlyOwner {
         rewardRate = newRate;

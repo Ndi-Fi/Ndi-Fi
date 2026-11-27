@@ -1,0 +1,160 @@
+name: Preview Deployment (Testnet)
+
+# Deploys the frontend help UI to a preview environment on every PR and
+# points it at testnet contracts / RPCs.  Surfaces the preview URL as a
+# PR comment so reviewers can test against live testnet state before merge.
+#
+# Issue #129 — Add a preview/testnet environment deployment config
+#
+# Required repository secrets (Settings → Secrets and variables → Actions):
+#   VERCEL_TOKEN        — Vercel personal access token
+#   VERCEL_ORG_ID       — Vercel team/personal org ID  (from vercel link)
+#   VERCEL_PROJECT_ID   — Vercel project ID            (from vercel link)
+#
+# Required environment variables (set in the preview GitHub environment):
+#   NEXT_PUBLIC_APP_ENV           = preview
+#   NEXT_PUBLIC_STELLAR_NETWORK   = testnet
+#   NEXT_PUBLIC_STELLAR_RPC_URL   = https://soroban-testnet.stellar.org
+#   NEXT_PUBLIC_ETH_RPC_URL       = <Sepolia RPC URL>
+#   NEXT_PUBLIC_DEFAULT_CHAIN_ID  = 11155111
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  # Always target testnet in preview; mainnet requires a separate prod deploy
+  NEXT_PUBLIC_APP_ENV: preview
+  NEXT_PUBLIC_STELLAR_NETWORK: testnet
+  NEXT_PUBLIC_STELLAR_RPC_URL: https://soroban-testnet.stellar.org
+  # Chain 11155111 = Sepolia (testnet), not mainnet
+  NEXT_PUBLIC_DEFAULT_CHAIN_ID: "11155111"
+
+jobs:
+  # ── 1. Run tests before deploying ─────────────────────────────────────────
+  test:
+    name: Frontend tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm install --no-save 2>/dev/null || true   # no deps needed for vanilla JS tests
+
+      - name: Run frontend tests
+        working-directory: frontend
+        run: npm test
+
+  # ── 2. Deploy preview to Vercel ───────────────────────────────────────────
+  deploy-preview:
+    name: Deploy to Vercel (preview)
+    runs-on: ubuntu-latest
+    needs: test
+    environment:
+      name: preview
+      url: ${{ steps.deploy.outputs.preview_url }}
+    outputs:
+      preview_url: ${{ steps.deploy.outputs.preview_url }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Pull Vercel project settings
+        working-directory: frontend
+        run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Build preview (inject testnet env vars)
+        working-directory: frontend
+        run: |
+          vercel build \
+            --env NEXT_PUBLIC_APP_ENV="$NEXT_PUBLIC_APP_ENV" \
+            --env NEXT_PUBLIC_STELLAR_NETWORK="$NEXT_PUBLIC_STELLAR_NETWORK" \
+            --env NEXT_PUBLIC_STELLAR_RPC_URL="$NEXT_PUBLIC_STELLAR_RPC_URL" \
+            --env NEXT_PUBLIC_DEFAULT_CHAIN_ID="$NEXT_PUBLIC_DEFAULT_CHAIN_ID" \
+            --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Deploy to Vercel
+        id: deploy
+        working-directory: frontend
+        run: |
+          PREVIEW_URL=$(vercel deploy \
+            --prebuilt \
+            --token=${{ secrets.VERCEL_TOKEN }} \
+            2>&1 | tail -1)
+          echo "preview_url=$PREVIEW_URL" >> "$GITHUB_OUTPUT"
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Post preview URL as PR comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const url = '${{ steps.deploy.outputs.preview_url }}';
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            // Update existing bot comment if present, otherwise create new one
+            const marker = '<!-- ndi-fi-preview -->';
+            const existing = comments.find(c =>
+              c.user.type === 'Bot' && c.body.includes(marker)
+            );
+            const body = `${marker}
+            ## 🚀 Preview deployment
+
+            | | |
+            |---|---|
+            | **Environment** | Testnet (Sepolia + Stellar testnet) |
+            | **Preview URL** | [${url}](${url}) |
+            | **Commit** | \`${{ github.event.pull_request.head.sha }}\` |
+
+            > ⚠️ This preview points at **testnet contracts only**. Mainnet is guarded by the \`NEXT_PUBLIC_APP_ENV\` flag.
+            `;
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }

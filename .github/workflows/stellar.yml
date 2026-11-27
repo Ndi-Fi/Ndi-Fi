@@ -16,7 +16,6 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
-  STELLAR_CLI_VERSION: "28.1.0"
 
 defaults:
   run:
@@ -29,50 +28,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # rustup reads stellar/rust-toolchain.toml (pinned toolchain + wasm32v1-none).
-      - name: Install Rust toolchain
-        run: |
-          rustup toolchain install
-          rustc --version
-          cargo --version
-
-      - name: Cache cargo
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            stellar/target
-          key: stellar-${{ runner.os }}-${{ hashFiles('stellar/Cargo.lock', 'stellar/rust-toolchain.toml') }}
-          restore-keys: stellar-${{ runner.os }}-
-
-      - name: Install Stellar CLI
-        run: |
-          curl -sSfL -o /tmp/stellar-cli.tar.gz \
-            "https://github.com/stellar/stellar-cli/releases/download/v${STELLAR_CLI_VERSION}/stellar-cli-${STELLAR_CLI_VERSION}-x86_64-unknown-linux-gnu.tar.gz"
-          mkdir -p "$HOME/.local/bin"
-          tar -xzf /tmp/stellar-cli.tar.gz -C "$HOME/.local/bin" stellar
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Build Docker image
+        run: docker build -f Dockerfile.stellar -t ndi-fi-stellar .
 
       - name: cargo fmt --check
-        run: cargo fmt --all --check
+        run: docker run --rm ndi-fi-stellar cargo fmt --all --check
 
       - name: cargo clippy
-        run: cargo clippy --all-targets --locked -- -D warnings
+        run: docker run --rm ndi-fi-stellar cargo clippy --all-targets --locked -- -D warnings
 
       - name: cargo test
-        run: cargo test --locked
+        run: docker run --rm ndi-fi-stellar cargo test --locked
 
       - name: stellar contract build
         run: |
-          stellar --version
-          stellar contract build
+          docker run --name stellar-build ndi-fi-stellar bash -c "stellar --version && stellar contract build && for c in ndi_token ndi_lending ndi_staking; do test -f \"target/wasm32v1-none/release/\${c}.wasm\" && ls -l \"target/wasm32v1-none/release/\${c}.wasm\"; done"
+          # Copy the built contracts out of the container so they can be uploaded.
+          mkdir -p target/wasm32v1-none/release
           for c in ndi_token ndi_lending ndi_staking; do
-            test -f "target/wasm32v1-none/release/${c}.wasm"
-            ls -l "target/wasm32v1-none/release/${c}.wasm"
+            docker cp "stellar-build:/app/stellar/target/wasm32v1-none/release/${c}.wasm" target/wasm32v1-none/release/
           done
+          docker rm stellar-build
 
-      # Retention is documented in CONTRIBUTING.md ("CI artifacts").
+      # Retention is documented in CONTRIBUTING.md ("Build artifacts").
       - name: Upload compiled .wasm contracts
         uses: actions/upload-artifact@v4
         with:

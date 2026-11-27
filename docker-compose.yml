@@ -1,0 +1,85 @@
+version: '3.8'
+
+# ==============================================================================
+# Ndi-Fi Protocol - Local Development Compose
+# ==============================================================================
+# Starts backend services (EVM anvil node, contract deployment) and frontend UI.
+#
+# Usage:
+#   docker-compose up -d             # Start all services in the background
+#   docker-compose logs -f           # Follow container logs
+#   docker-compose down              # Stop and remove containers
+#
+# Environment:
+#   Both backend and frontend services consume configuration from .env via
+#   the env_file directive. Copy .env.example to .env before starting.
+# ==============================================================================
+
+services:
+  # ----------------------------------------------------------------------------
+  # Backend: Local EVM Anvil node & contract runtime
+  # ----------------------------------------------------------------------------
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: ndifi-backend
+    env_file:
+      - .env
+    ports:
+      - "${ANVIL_PORT:-8545}:8545"
+    environment:
+      - ANVIL_PORT=${ANVIL_PORT:-8545}
+      - ETH_RPC_URL=${ETH_RPC_URL:-http://localhost:8545}
+      - CHAIN_ID=${CHAIN_ID:-31337}
+      - PRIVATE_KEY=${PRIVATE_KEY:-0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf -X POST -H 'Content-Type: application/json' -d '{\"jsonrpc\":\"2.0\",\"method\":\"eth_chainId\",\"params\":[],\"id\":1}' http://127.0.0.1:8545 || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 3s
+    networks:
+      - ndifi-net
+
+  # ----------------------------------------------------------------------------
+  # Frontend: Web interface & DeFi Help UI (reads NEXT_PUBLIC_* from .env)
+  # ----------------------------------------------------------------------------
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        NEXT_PUBLIC_APP_ENV: ${NEXT_PUBLIC_APP_ENV:-development}
+        NEXT_PUBLIC_ETH_RPC_URL: ${NEXT_PUBLIC_ETH_RPC_URL:-http://localhost:8545}
+        NEXT_PUBLIC_DEFAULT_CHAIN_ID: ${NEXT_PUBLIC_DEFAULT_CHAIN_ID:-31337}
+        NEXT_PUBLIC_STELLAR_NETWORK: ${NEXT_PUBLIC_STELLAR_NETWORK:-testnet}
+        NEXT_PUBLIC_STELLAR_RPC_URL: ${NEXT_PUBLIC_STELLAR_RPC_URL:-https://soroban-testnet.stellar.org}
+    container_name: ndifi-frontend
+    env_file:
+      - .env
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=development
+      - NEXT_PUBLIC_APP_ENV=${NEXT_PUBLIC_APP_ENV:-development}
+      - NEXT_PUBLIC_ETH_RPC_URL=${NEXT_PUBLIC_ETH_RPC_URL:-http://localhost:8545}
+      - NEXT_PUBLIC_DEFAULT_CHAIN_ID=${NEXT_PUBLIC_DEFAULT_CHAIN_ID:-31337}
+      - NEXT_PUBLIC_STELLAR_NETWORK=${NEXT_PUBLIC_STELLAR_NETWORK:-testnet}
+      - NEXT_PUBLIC_STELLAR_RPC_URL=${NEXT_PUBLIC_STELLAR_RPC_URL:-https://soroban-testnet.stellar.org}
+      - NEXT_PUBLIC_NDI_VAULT_ADDRESS=${NEXT_PUBLIC_NDI_VAULT_ADDRESS:-}
+      - NEXT_PUBLIC_NDI_LENDING_ADDRESS=${NEXT_PUBLIC_NDI_LENDING_ADDRESS:-}
+      - NEXT_PUBLIC_NDI_STAKING_ADDRESS=${NEXT_PUBLIC_NDI_STAKING_ADDRESS:-}
+      - NEXT_PUBLIC_NDI_POINT_ADDRESS=${NEXT_PUBLIC_NDI_POINT_ADDRESS:-}
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - ndifi-net
+
+networks:
+  ndifi-net:
+    driver: bridge

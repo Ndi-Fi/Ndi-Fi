@@ -1,0 +1,47 @@
+# Dockerfile for Foundry-based Solidity builds
+# Pinned versions for reproducible builds
+
+FROM ubuntu:22.04
+
+# Prevent interactive prompts during package installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    git \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Foundry with pinned version
+# Using specific commit for reproducibility
+ENV FOUNDRY_VERSION=nightly-2024-01-15
+RUN curl -L https://foundry.paradigm.xyz | bash && \
+    export PATH="$HOME/.foundry/bin:$PATH" && \
+    foundryup -i forge -i cast -i anvil -i chisel -v $FOUNDRY_VERSION
+
+# Set PATH for Foundry tools
+ENV PATH="/root/.foundry/bin:$PATH"
+
+# Verify installation
+RUN forge --version && \
+    cast --version && \
+    anvil --version
+
+# Set working directory
+WORKDIR /app
+
+# Copy project files
+COPY . .
+
+# Install git submodules
+RUN git submodule update --init --recursive
+
+# Build contracts
+RUN forge build
+
+# Run tests
+RUN forge test
+
+# Default command
+CMD ["forge", "build"]

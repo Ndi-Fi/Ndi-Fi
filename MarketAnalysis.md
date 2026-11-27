@@ -68,3 +68,41 @@ Ndi-Fi is unlikely to compete with Aave or Yearn on features and complexity. Ins
 2.  **Prioritize Security:** Conduct multiple, reputable audits and heavily market the protocol's safety and use of best practices.
 3.  **Develop a Clear Governance Roadmap:** Publicly commit to a multi-stage plan to decentralize control over the protocol. This is critical for long-term legitimacy and user trust.
 4.  **Bootstrap Demand:** Initially, the protocol may need to offer high NDI token incentives to both borrowers and lenders/stakers to kickstart the economic flywheel.
+
+---
+
+## 6. Contributor Note — Protocol Positioning
+
+> **Scope of this note:** This section is written for contributors who want to understand the strategic context behind design and prioritization decisions. It is intentionally concise and factual; it does not constitute financial advice or a promise of future performance.
+
+### Where Ndi-Fi sits in the market
+
+Ndi-Fi occupies the **beginner-friendly, single-collateral lending + staking** niche. Its ERC-4626 vault, fixed-fee borrowing model, and integrated staking make the protocol easier to reason about than multi-asset money markets, at the cost of lower capital flexibility for power users.
+
+The clearest gap the protocol fills is the absence of a genuinely simple "deposit → earn → borrow" loop for users who are priced out of the complexity and gas costs of Aave or Compound. The Stellar Soroban implementation extends that positioning to a lower-fee, faster-settlement environment with its own underserved user base.
+
+### Why simplicity is a deliberate architectural choice
+
+- A single borrowable asset (the vault's underlying token) eliminates oracle surface area and cross-asset liquidation complexity — two of the most common root causes of lending protocol exploits.
+- A fixed origination fee is predictable for borrowers and easier to audit than dynamic interest curves.
+- ERC-4626 composability means third-party aggregators can include the vault without custom integration work, enabling organic distribution.
+
+### Roadmap features that reinforce this positioning
+
+The roadmap items most directly tied to competitive positioning are:
+
+| Phase | Feature | Positioning impact |
+|---|---|---|
+| Phase 1 | Security audits + documentation | Builds the trust foundation required to attract any users |
+| Phase 2 | Dynamic interest rate model | Closes the yield-efficiency gap with established protocols |
+| Phase 2 | Multi-collateral lending | Widens the addressable borrower market without changing UX complexity |
+| Phase 3 | DAO governance | Removes the centralization weakness identified in the SWOT above |
+| Phase 4 | RWA collateral | Differentiates from incumbents by bridging off-chain assets |
+
+For the full milestone timeline, see [`Roadmap.md`](./Roadmap.md).
+
+### Contributor guidelines for this document
+
+- Keep claims factual and grounded in the current contract behavior. If a feature does not yet exist on-chain, say "planned" and link to the relevant roadmap phase.
+- Do not add forward-looking performance projections (e.g., expected TVL or APY ranges). Those belong in internal planning documents, not in public-facing repo documentation.
+- If the competitive landscape changes materially (e.g., a major competitor launches a comparable simple-vault product), update Section 3 and re-evaluate the SWOT before updating this note.

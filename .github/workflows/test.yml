@@ -10,15 +10,29 @@ permissions:   # allows the workflow to read repo contents (no write needed for 
 
 env:
   FOUNDRY_PROFILE: ci
-  # Supported toolchain. Keep in sync with "Supported toolchain versions" in CONTRIBUTING.md.
-  PINNED_FOUNDRY_VERSION: "1.2.3"
-  PINNED_SOLC_VERSION: "0.8.30"
   # How long build outputs are kept. Documented in CONTRIBUTING.md.
   ARTIFACT_RETENTION_DAYS: 14
 
 jobs:
+  web:
+    name: Web package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run web tests
+        working-directory: web
+        run: npm test
+
   check:
-    # Pinned toolchain. This is the only Foundry job that blocks merges.
+    # Pinned toolchain (FOUNDRY_VERSION in Dockerfile.foundry). This is the only
+    # Foundry job that blocks merges. Keep in sync with "Supported toolchain
+    # versions" in CONTRIBUTING.md.
     name: Foundry project (pinned, blocking)
     runs-on: ubuntu-latest
     steps:
@@ -26,25 +40,21 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
-        with:
-          version: ${{ env.PINNED_FOUNDRY_VERSION }}
+      - name: Build Docker image
+        run: docker build -f Dockerfile.foundry -t ndi-fi-foundry .
 
-      - name: Show Forge version
-        run: forge --version
-
-      - name: Run Forge fmt (auto-format if check fails)
-        run: forge fmt --check || (forge fmt && echo "Code auto-formatted 🚀")
-        id: fmt
+      - name: Run Forge fmt
+        run: docker run --rm ndi-fi-foundry forge fmt --check
 
       - name: Run Forge build
-        run: forge build --sizes --use "${PINNED_SOLC_VERSION}"
-        id: build
+        run: |
+          docker run --name forge-build ndi-fi-foundry forge build --sizes
+          # Copy the build output out of the container so it can be uploaded.
+          docker cp forge-build:/app/out ./out
+          docker rm forge-build
 
       - name: Run Forge tests
-        run: forge test -vvv --use "${PINNED_SOLC_VERSION}"
-        id: test
+        run: docker run --rm ndi-fi-foundry forge test -vvv
 
       - name: Upload forge out/ artifacts
         uses: actions/upload-artifact@v4
@@ -64,10 +74,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { foundry: stable, solc: "0.8.30" }
-          - { foundry: nightly, solc: "0.8.30" }
-          - { foundry: "1.2.3", solc: "0.8.24" }
-          - { foundry: "1.2.3", solc: "0.8.28" }
+          - { foundry: stable, solc: auto }
+          - { foundry: nightly, solc: auto }
+          - { foundry: stable, solc: "0.8.24" }
+          - { foundry: stable, solc: "0.8.28" }
     steps:
       - uses: actions/checkout@v4
         with:
@@ -82,7 +92,13 @@ jobs:
         run: forge --version
 
       - name: Run Forge build
-        run: forge build --sizes --use "${{ matrix.solc }}"
+        env:
+          SOLC: ${{ matrix.solc }}
+        run: |
+          if [ "$SOLC" = auto ]; then forge build --sizes; else forge build --sizes --use "$SOLC"; fi
 
       - name: Run Forge tests
-        run: forge test -vvv --use "${{ matrix.solc }}"
+        env:
+          SOLC: ${{ matrix.solc }}
+        run: |
+          if [ "$SOLC" = auto ]; then forge test -vvv; else forge test -vvv --use "$SOLC"; fi

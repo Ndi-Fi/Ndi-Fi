@@ -93,4 +93,6 @@ directory, outside the repo. After deploying, fund the staking reward pool with
 
 See [`CONTRIBUTING.md`](../CONTRIBUTING.md) and the
 [Stellar Wave Program](https://www.drips.network/wave/stellar).
+To run the full local stack (EVM + Stellar + web) in one command, see
+[`docs/LOCAL_STACK.md`](../docs/LOCAL_STACK.md).
 Do not start work on an issue until a maintainer assigns it to you.

@@ -1,0 +1,33 @@
+# ==============================================================================
+# Ndi-Fi Frontend Dockerfile (DeFi Help UI & Web Client)
+# ==============================================================================
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy package configurations and scripts
+COPY frontend/package.json ./frontend/package.json
+COPY web/package.json ./web/package.json
+COPY .env.example ./
+COPY scripts/ ./scripts/
+
+# ------------------------------------------------------------------------------
+# Build-time validation: Validate .env.example specification
+# ------------------------------------------------------------------------------
+RUN node ./scripts/validate-env.js --check-example
+
+# Copy frontend source files
+COPY frontend/ ./frontend/
+COPY web/ ./web/
+
+WORKDIR /app/frontend
+
+EXPOSE 3000
+
+ENV PORT=3000
+ENV NODE_ENV=development
+
+HEALTHCHECK --interval=10s --timeout=3s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3000', (r) => {if (r.statusCode >= 400 && r.statusCode !== 404) process.exit(1);})" || exit 1
+
+CMD ["npm", "run", "demo"]

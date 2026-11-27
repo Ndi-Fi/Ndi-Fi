@@ -10,34 +10,51 @@ import "lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
 /**
  * @title NdiPoint
- * @dev ERC20 Token for NDI-REWARD POINTS system
- * @dev This contract implements a reward points token with the following features:
- * - ERC20 standard functionality
- * - Burnable tokens
- * - Pausable functionality for emergency stops
- * - Role-based access control for minting
- * - EIP-2612 permit functionality for gasless approvals
- * - Reentrancy protection
- * - Reward distribution mechanism
- * - Staking integration points
+ * @notice ERC-20 reward points token used across the Ndi-Fi protocol.
+ * @dev Implements standard ERC-20 transfers, burnable and pausable balances, role-based minting,
+ * EIP-2612 gasless approvals, reentrancy protection, reward distribution and staking integration.
  */
 contract NdiPoint is ERC20, ERC20Burnable, ERC20Pausable, AccessControl, ERC20Permit, ReentrancyGuard {
     // Role definitions
+    /// @notice Role that may pause and unpause token transfers.
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+
+    /// @notice Role that may mint new tokens.
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+
+    /// @notice Role that may distribute reward tokens.
     bytes32 public constant REWARD_DISTRIBUTOR_ROLE = keccak256("REWARD_DISTRIBUTOR_ROLE");
 
     // Token configuration
+    /// @notice Maximum total supply, capped at one billion tokens.
     uint256 public constant MAX_SUPPLY = 1_000_000_000 * 10 ** 18; // 1 billion tokens max supply
+
+    /// @notice Supply minted to the initial owner at deployment.
     uint256 public constant INITIAL_SUPPLY = 100_000_000 * 10 ** 18; // 100 million initial supply
 
     // Reward and staking related variables
+    /// @notice Timestamp of the most recent reward distribution to an account.
     mapping(address => uint256) public lastRewardClaim;
+
+    /// @notice Whether an external contract is authorized to interact with this token.
     mapping(address => bool) public isAuthorizedContract;
 
     // Events
+    /// @notice Emitted when reward points are minted to a recipient.
+    /// @param recipient Account receiving the reward.
+    /// @param amount Amount of points distributed.
+    /// @param reason Human-readable reason for the distribution.
     event RewardDistributed(address indexed recipient, uint256 amount, string reason);
+
+    /// @notice Emitted when an external contract's authorization changes.
+    /// @param contractAddress Contract whose authorization changed.
+    /// @param authorized New authorization status.
     event ContractAuthorized(address indexed contractAddress, bool authorized);
+
+    /// @notice Emitted when accidentally sent ERC-20 tokens are recovered.
+    /// @param token Address of the recovered token.
+    /// @param to Address receiving the recovered tokens.
+    /// @param amount Amount of tokens recovered.
     event TokensRecovered(address indexed token, address indexed to, uint256 amount);
 
     /**
@@ -163,14 +180,16 @@ contract NdiPoint is ERC20, ERC20Burnable, ERC20Pausable, AccessControl, ERC20Pe
     }
 
     /**
-     * @dev Returns the maximum supply of tokens
+     * @notice Returns the maximum supply of tokens
+     * @return The maximum number of tokens that can ever exist
      */
     function maxSupply() public pure returns (uint256) {
         return MAX_SUPPLY;
     }
 
     /**
-     * @dev Returns the remaining mintable supply
+     * @notice Returns the remaining mintable supply
+     * @return The number of tokens that can still be minted
      */
     function remainingSupply() public view returns (uint256) {
         return MAX_SUPPLY - totalSupply();

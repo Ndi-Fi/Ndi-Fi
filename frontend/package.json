@@ -1,0 +1,14 @@
+{
+  "name": "ndi-fi-help-ui",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Accessible, localized DeFi tooltips and inline help for Ndi-Fi",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "demo": "node scripts/serve.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
