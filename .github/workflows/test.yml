@@ -10,6 +10,8 @@ permissions:   # allows the workflow to read repo contents (no write needed for 
 
 env:
   FOUNDRY_PROFILE: ci
+  # How long build outputs are kept. Documented in CONTRIBUTING.md.
+  ARTIFACT_RETENTION_DAYS: 14
 
 jobs:
   web:
@@ -28,7 +30,10 @@ jobs:
         run: npm test
 
   check:
-    name: Foundry project
+    # Pinned toolchain (FOUNDRY_VERSION in Dockerfile.foundry). This is the only
+    # Foundry job that blocks merges. Keep in sync with "Supported toolchain
+    # versions" in CONTRIBUTING.md.
+    name: Foundry project (pinned, blocking)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -42,7 +47,58 @@ jobs:
         run: docker run --rm ndi-fi-foundry forge fmt --check
 
       - name: Run Forge build
-        run: docker run --rm ndi-fi-foundry forge build --sizes
+        run: |
+          docker run --name forge-build ndi-fi-foundry forge build --sizes
+          # Copy the build output out of the container so it can be uploaded.
+          docker cp forge-build:/app/out ./out
+          docker rm forge-build
 
       - name: Run Forge tests
         run: docker run --rm ndi-fi-foundry forge test -vvv
+
+      - name: Upload forge out/ artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: forge-out-${{ github.sha }}
+          path: out/
+          if-no-files-found: error
+          retention-days: ${{ env.ARTIFACT_RETENTION_DAYS }}
+
+  compat:
+    # Non-pinned toolchains. Informational only: failures are reported but never
+    # block a merge, because continue-on-error keeps the workflow green.
+    name: Foundry ${{ matrix.foundry }} / solc ${{ matrix.solc }} (informational)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { foundry: stable, solc: auto }
+          - { foundry: nightly, solc: auto }
+          - { foundry: stable, solc: "0.8.24" }
+          - { foundry: stable, solc: "0.8.28" }
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: ${{ matrix.foundry }}
+
+      - name: Show Forge version
+        run: forge --version
+
+      - name: Run Forge build
+        env:
+          SOLC: ${{ matrix.solc }}
+        run: |
+          if [ "$SOLC" = auto ]; then forge build --sizes; else forge build --sizes --use "$SOLC"; fi
+
+      - name: Run Forge tests
+        env:
+          SOLC: ${{ matrix.solc }}
+        run: |
+          if [ "$SOLC" = auto ]; then forge test -vvv; else forge test -vvv --use "$SOLC"; fi

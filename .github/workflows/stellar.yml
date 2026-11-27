@@ -42,5 +42,22 @@ jobs:
 
       - name: stellar contract build
         run: |
-          docker run --rm ndi-fi-stellar bash -c "stellar --version && stellar contract build"
-          docker run --rm ndi-fi-stellar bash -c "for c in ndi_token ndi_lending ndi_staking; do test -f \"target/wasm32v1-none/release/\${c}.wasm\" && ls -l \"target/wasm32v1-none/release/\${c}.wasm\"; done"
+          docker run --name stellar-build ndi-fi-stellar bash -c "stellar --version && stellar contract build && for c in ndi_token ndi_lending ndi_staking; do test -f \"target/wasm32v1-none/release/\${c}.wasm\" && ls -l \"target/wasm32v1-none/release/\${c}.wasm\"; done"
+          # Copy the built contracts out of the container so they can be uploaded.
+          mkdir -p target/wasm32v1-none/release
+          for c in ndi_token ndi_lending ndi_staking; do
+            docker cp "stellar-build:/app/stellar/target/wasm32v1-none/release/${c}.wasm" target/wasm32v1-none/release/
+          done
+          docker rm stellar-build
+
+      # Retention is documented in CONTRIBUTING.md ("Build artifacts").
+      - name: Upload compiled .wasm contracts
+        uses: actions/upload-artifact@v4
+        with:
+          name: stellar-wasm-${{ github.sha }}
+          path: |
+            stellar/target/wasm32v1-none/release/ndi_token.wasm
+            stellar/target/wasm32v1-none/release/ndi_lending.wasm
+            stellar/target/wasm32v1-none/release/ndi_staking.wasm
+          if-no-files-found: error
+          retention-days: 14

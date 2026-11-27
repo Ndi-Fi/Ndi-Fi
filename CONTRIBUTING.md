@@ -56,7 +56,8 @@ The script checks for missing tools ([Foundry](https://book.getfoundry.sh/gettin
 
 ### Solidity / Foundry
 
-1. **Foundry.** Install from <https://getfoundry.sh>. Pin matches CI: `1.2.3`.
+1. **Foundry.** Install from <https://getfoundry.sh>. CI pins the version in
+   `Dockerfile.foundry` (`FOUNDRY_VERSION`).
 
 2. **Install dependencies**
 
@@ -210,6 +211,72 @@ actionlint
 ```
 
 CI runs the same check on every change to `.github/workflows/**`.
+
+## CI
+
+### Supported toolchain versions
+
+| Tool | Supported (pinned, blocking) | Also tested (informational) |
+| --- | --- | --- |
+| Foundry | `FOUNDRY_VERSION` in `Dockerfile.foundry` | `stable`, `nightly` |
+| solc | auto-detected from `pragma` (`^0.8.20`) | `0.8.24`, `0.8.28` (on Foundry `stable`) |
+| Rust (Stellar) | `RUST_VERSION` in `Dockerfile.stellar` | none |
+| Stellar CLI | `STELLAR_CLI_VERSION` in `Dockerfile.stellar` | none |
+
+Only the pinned Foundry job (`Foundry project (pinned, blocking)` in
+`.github/workflows/test.yml`) can fail the build. The `compat` matrix jobs,
+marked `(informational)`, use `continue-on-error`. A red informational job
+means a newer toolchain breaks something, but it does not block a merge.
+The blocking job builds inside the `Dockerfile.foundry` image, so to change the
+pinned version, update `FOUNDRY_VERSION` there (and this table if needed) in
+the same PR.
+
+### Build artifacts
+
+CI uploads build outputs so you can inspect or deploy them without rebuilding.
+Download them from the **Artifacts** section of a workflow run.
+
+| Artifact | Workflow | Contents |
+| --- | --- | --- |
+| `forge-out-<sha>` | CI (`test.yml`) | Foundry `out/` (ABIs, bytecode, build info) |
+| `stellar-wasm-<sha>` | Stellar (`stellar.yml`) | `ndi_token.wasm`, `ndi_lending.wasm`, `ndi_staking.wasm` |
+| `web-build-<sha>` | Web (`web.yml`) | Web app build output (`dist/`, `build/`, `out/` or `.next/`), or the static files if there is no `build` script |
+
+Artifacts are kept for **14 days**, then GitHub deletes them. The web job
+uses the first of `web/`, `frontend/` or `app/` that has a `package.json`
+(today that is `web/`).
+
+### Environment variables
+
+Every environment variable the code reads must be listed in `.env.example`.
+Variables a deploy cannot run without also go in `.github/env/required.txt`.
+The `Env check` workflow runs `.github/scripts/check_env.py --strict` when
+`.env.example`, config or source files change, and fails if:
+
+- a required variable is missing from `.env.example`,
+- code reads a variable that `.env.example` does not list,
+- `.env.example` lists a variable no code reads (renamed or removed), or
+- `.env.example` has a duplicate or malformed line.
+
+Run it locally with `python3 .github/scripts/check_env.py`.
+
+## Stale issue and PR policy
+
+A bot (`.github/workflows/stale.yml`) runs daily to keep the tracker tidy:
+
+- **Issues** with no activity for **60 days** get the `stale` label and a
+  comment. They close **14 days** later if nothing happens.
+- **Pull requests** with no activity for **30 days** get the `stale` label and
+  close **14 days** later.
+- Any comment, commit or label change removes the `stale` label and resets
+  the clock.
+- These are **never** marked stale: anything labelled `pinned`, `security`,
+  `Stellar Wave` or `wave`, anything in a milestone, and anything with an
+  assignee.
+
+Closed items can be reopened. Maintainers review these thresholds every
+quarter (January, April, July, October) and adjust them in `stale.yml` and
+here if they close too much or too little.
 
 ## Pull requests
 

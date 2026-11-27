@@ -1,0 +1,111 @@
+name: Web
+
+# Builds the web app and uploads its build output as an artifact.
+# The app is expected in one of WEB_DIR_CANDIDATES (the first one with a
+# package.json wins). If package.json has no "build" script, the package is
+# treated as static and its files are uploaded as-is.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  WEB_DIR_CANDIDATES: "web frontend app"
+  NODE_VERSION: "20"
+  # How long build outputs are kept. Documented in CONTRIBUTING.md.
+  ARTIFACT_RETENTION_DAYS: 14
+
+jobs:
+  detect:
+    name: Detect web app
+    runs-on: ubuntu-latest
+    outputs:
+      dir: ${{ steps.find.outputs.dir }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Find web app directory
+        id: find
+        run: |
+          for d in ${WEB_DIR_CANDIDATES}; do
+            if [ -f "$d/package.json" ]; then
+              echo "Found web app in $d/"
+              echo "dir=$d" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          done
+          echo "No web app found (looked in: ${WEB_DIR_CANDIDATES}). Skipping build."
+
+  build:
+    name: Build web app
+    needs: detect
+    if: needs.detect.outputs.dir != ''
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ needs.detect.outputs.dir }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Check for a build script
+        id: kind
+        run: |
+          if node -e 'process.exit(require("./package.json").scripts?.build ? 0 : 1)'; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No build script in package.json: uploading the static files as-is."
+            echo "build=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install dependencies
+        if: steps.kind.outputs.build == 'true'
+        run: |
+          if [ -f pnpm-lock.yaml ]; then corepack enable && pnpm install --frozen-lockfile
+          elif [ -f yarn.lock ]; then corepack enable && yarn install --frozen-lockfile
+          elif [ -f package-lock.json ]; then npm ci
+          else npm install
+          fi
+
+      - name: Build
+        if: steps.kind.outputs.build == 'true'
+        run: npm run build
+
+      - name: Locate build output
+        id: out
+        env:
+          WEB_DIR: ${{ needs.detect.outputs.dir }}
+          HAS_BUILD: ${{ steps.kind.outputs.build }}
+        run: |
+          if [ "$HAS_BUILD" != true ]; then
+            # Static package: ship the directory itself, minus tests and deps.
+            echo "path=${WEB_DIR}/" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          for d in dist build out .next; do
+            if [ -d "$d" ]; then
+              echo "path=${WEB_DIR}/$d" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          done
+          echo "error: no build output found (looked for dist/, build/, out/, .next/)" >&2
+          exit 1
+
+      - name: Upload web build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-build-${{ github.sha }}
+          path: |
+            ${{ steps.out.outputs.path }}
+            !${{ needs.detect.outputs.dir }}/node_modules/**
+            !${{ needs.detect.outputs.dir }}/test/**
+            !${{ needs.detect.outputs.dir }}/**/*.test.js
+          if-no-files-found: error
+          retention-days: ${{ env.ARTIFACT_RETENTION_DAYS }}
